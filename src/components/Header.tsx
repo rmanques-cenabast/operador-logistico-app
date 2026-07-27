@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Bell, HelpCircle, Box } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Box, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   searchPlaceholder?: string;
@@ -7,6 +7,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ searchPlaceholder = "Buscar Pre Avisos, OC o Productos...", showSearch = true }) => {
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <header className="top-header" style={{ display: 'flex', alignItems: 'center', padding: '16px 32px', gap: '24px', minHeight: '72px', borderBottom: '1px solid var(--border-color)', background: 'white' }}>
       <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -30,20 +32,63 @@ const Header: React.FC<HeaderProps> = ({ searchPlaceholder = "Buscar Pre Avisos,
       </div>
       
       <div className="header-actions">
-        <button className="icon-action-btn">
-          <Bell size={20} />
-          <span className="notification-dot"></span>
-        </button>
-        <button className="icon-action-btn">
-          <HelpCircle size={20} />
-        </button>
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-        <div className="avatar-initials" style={{
-          background: 'linear-gradient(135deg, var(--text-main) 0%, #475569 100%)', 
-          color: '#fff',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          cursor: 'pointer'
-        }}>OP</div>
+        <div style={{ position: 'relative' }}>
+          <div className="avatar-initials" 
+            onClick={() => setShowMenu(!showMenu)}
+            style={{
+              background: 'linear-gradient(135deg, var(--text-main) 0%, #475569 100%)', 
+              color: '#fff',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              cursor: 'pointer'
+            }}>OP</div>
+
+            {showMenu && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 12px)',
+                right: 0,
+                background: 'white',
+                border: '1px solid var(--border-color)',
+                borderRadius: '12px',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                minWidth: '240px',
+                zIndex: 50,
+                overflow: 'hidden',
+                animation: 'fadeIn 0.2s ease-out'
+              }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', background: '#f8fafc' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>Operador Logístico</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>operador@cenabast.cl</div>
+                </div>
+                
+                <div style={{ padding: '8px' }}>
+                  <button 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: 'transparent',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      color: '#ef4444',
+                      fontSize: '0.9rem',
+                      fontWeight: 500,
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#b91c1c'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ef4444'; }}
+                    onClick={() => setShowMenu(false)}
+                  >
+                    <LogOut size={16} />
+                    Cerrar sesión
+                  </button>
+                </div>
+              </div>
+            )}
+        </div>
       </div>
     </header>
   );

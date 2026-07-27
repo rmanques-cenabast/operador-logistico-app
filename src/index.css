@@ -8,7 +8,7 @@
   --primary: #c2d5f2;
   --primary-dark: #a1b8db;
   --border-color: #e5e7eb;
-  
+
   --success-bg: #d1fae5;
   --success-text: #065f46;
   --warning-bg: #fef3c7;
@@ -19,7 +19,7 @@
   --info-text: #1e40af;
   --draft-bg: #f3f4f6;
   --draft-text: #374151;
-  
+
   --primary-main: #2563eb;
   --success-main: #10b981;
 }
@@ -267,7 +267,7 @@ body {
   font-size: 0.9rem;
   outline: none;
   transition: all 0.3s;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .search-bar input:focus {
@@ -334,8 +334,13 @@ body {
   font-weight: 500;
 }
 
-.trend-up { color: var(--danger-text); }
-.trend-down { color: var(--success-text); }
+.trend-up {
+  color: var(--danger-text);
+}
+
+.trend-down {
+  color: var(--success-text);
+}
 
 /* Table styles */
 .data-table-container {
@@ -447,11 +452,30 @@ td {
   font-family: 'JetBrains Mono', monospace;
 }
 
-.badge.danger { background: var(--danger-bg); color: var(--danger-text); }
-.badge.info { background: var(--info-bg); color: var(--info-text); }
-.badge.draft { background: var(--draft-bg); color: var(--draft-text); }
-.badge.success { background: var(--success-bg); color: var(--success-text); }
-.badge.warning { background: var(--warning-bg); color: var(--warning-text); }
+.badge.danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.badge.info {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+.badge.draft {
+  background: var(--draft-bg);
+  color: var(--draft-text);
+}
+
+.badge.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.badge.warning {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
 
 .table-footer {
   padding: 16px 24px;
@@ -544,8 +568,11 @@ td {
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -560,7 +587,7 @@ td {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -635,17 +662,27 @@ td {
 .sidebar {
   transition: width 0.3s ease;
 }
+
 .sidebar.collapsed {
   width: 72px;
 }
+
 .sidebar.collapsed .submenu {
   display: none;
 }
 
 @keyframes pulseDot {
-  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
-  70% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
 }
 
 .pulse-dot {
@@ -660,15 +697,42 @@ td {
 }
 
 @keyframes pulseRingPrimary {
-  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5); }
-  70% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5);
+  }
+
+  70% {
+    box-shadow: 0 0 0 12px rgba(37, 99, 235, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
 }
 
 @keyframes pulseRingSuccess {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
-  70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+
+  70% {
+    box-shadow: 0 0 0 12px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes transfer-fly {
+  0% { transform: translateX(-4px); opacity: 0; }
+  30% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translateX(8px); opacity: 0; }
+}
+
+.transfer-arrow {
+  animation: transfer-fly 1.5s infinite;
 }
 
 .active-step-primary {
@@ -680,38 +744,65 @@ td {
 }
 
 @keyframes progressPingPongWidth {
-  0% { width: 0%; }
-  50% { width: 100%; }
-  100% { width: 0%; }
+  0% {
+    width: 0%;
+  }
+
+  50% {
+    width: 100%;
+  }
+
+  100% {
+    width: 0%;
+  }
 }
 
 @keyframes progressPingPongDot {
-  0% { left: 0%; }
-  50% { left: 100%; }
-  100% { left: 0%; }
+  0% {
+    left: 0%;
+  }
+
+  50% {
+    left: 100%;
+  }
+
+  100% {
+    left: 0%;
+  }
 }
+
 @keyframes progressStripes {
-  from { background-position: 1rem 0; }
-  to { background-position: 0 0; }
+  from {
+    background-position: 1rem 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
 }
 
 @keyframes blinkLine {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .loading-line-active {
   width: 100% !important;
-  background-image: linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.25) 25%,
-    transparent 25%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.25) 50%,
-    rgba(255, 255, 255, 0.25) 75%,
-    transparent 75%,
-    transparent
-  ) !important;
+  background-image: linear-gradient(45deg,
+      rgba(255, 255, 255, 0.25) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.25) 50%,
+      rgba(255, 255, 255, 0.25) 75%,
+      transparent 75%,
+      transparent) !important;
   background-size: 1rem 1rem !important;
   background-color: var(--primary-main) !important;
   animation: progressStripes 1s linear infinite, blinkLine 2s ease-in-out infinite;
@@ -721,4 +812,3 @@ td {
   left: 100% !important;
   animation: pulseDot 1.5s infinite, blinkLine 1.5s ease-in-out infinite !important;
 }
-

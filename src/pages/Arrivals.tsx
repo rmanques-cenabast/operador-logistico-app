@@ -25,7 +25,7 @@ interface ArrivalOrder {
 
 const Arrivals: React.FC = () => {
   const [orders, setOrders] = useState<ArrivalOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('TODOS');
@@ -111,15 +111,15 @@ const Arrivals: React.FC = () => {
             setOrders(mappedData);
           }
         })
-        .catch(err => console.error("Error fetching received orders:", err))
-        .finally(() => setIsLoading(false));
+        .catch(err => console.error("Error fetching received orders:", err));
+        // .finally(() => setIsLoading(false));
     };
 
     // Llamada inicial
     fetchData();
 
-    // Polling silencioso cada 15 segundos
-    const intervalId = setInterval(fetchData, 15000);
+    // Polling silencioso cada 3 segundos
+    const intervalId = setInterval(fetchData, 3000);
 
     // Limpieza al desmontar el componente
     return () => clearInterval(intervalId);

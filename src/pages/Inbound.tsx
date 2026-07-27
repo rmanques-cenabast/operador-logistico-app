@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
-import { ChevronDown, X, CheckCircle, FileText, Info, Eye, Package, Calendar, Building2, Search } from 'lucide-react';
+import { X, CheckCircle, FileText, Eye, Package, Calendar, Search } from 'lucide-react';
 
 interface PreAvisoLine {
   preAvisoId: string;
@@ -19,7 +19,7 @@ interface PreAvisoLine {
 
 const Inbound: React.FC = () => {
   const [preAvisoLines, setPreAvisoLines] = useState<PreAvisoLine[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedPA, setSelectedPA] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState('TODOS');
@@ -28,7 +28,8 @@ const Inbound: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
+  const loadData = () => {
+    // if (!silent) setIsLoading(true);
     Promise.all([
       fetch('http://localhost:3000/api/v1/ol/inbound/pending').then(res => res.json()),
       fetch('http://localhost:3000/api/v1/ol/inbound/completed').then(res => res.json())
@@ -63,12 +64,10 @@ const Inbound: React.FC = () => {
             status = 'APROBADO OL';
             badge = 'success';
           } else if (item.Cantidad <= 0) {
-            // Si no queda cantidad pendiente, forzamos el estado a APROBADO OL
             status = 'APROBADO OL';
             badge = 'success';
           }
           
-          // Función auxiliar para formatear fechas al estilo del diseño (ej. "08 jun, 2026")
           const formatDate = (dateString: string) => {
             if (!dateString) return 'N/A';
             const date = new Date(dateString);
@@ -92,8 +91,16 @@ const Inbound: React.FC = () => {
         });
         setPreAvisoLines(mappedData);
       })
-      .catch(err => console.error("Error fetching preavisos:", err))
-      .finally(() => setIsLoading(false));
+      .catch(err => console.error("Error fetching preavisos:", err));
+      // .finally(() => {
+      //   if (!silent) setIsLoading(false);
+      // });
+  };
+
+  useEffect(() => {
+    loadData();
+    const intervalId = setInterval(() => loadData(), 3000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const uniqueProviders = Array.from(new Set(preAvisoLines.map(l => l.provider)));

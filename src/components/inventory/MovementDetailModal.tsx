@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Package, FileText, Database, ArrowRightLeft, Building2, User, Calendar, CheckCircle2 } from 'lucide-react';
-import { AdjustmentHeader, AdjustmentDetail } from '../../pages/Inventory';
+import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 
 interface MovementDetailModalProps {
   header: AdjustmentHeader;
