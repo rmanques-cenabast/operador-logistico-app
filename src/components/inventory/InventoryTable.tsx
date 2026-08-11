@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ArrowRight, Eye } from 'lucide-react';
 import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { MovementDetailModal } from './MovementDetailModal';
 
@@ -28,6 +28,33 @@ export const getMovimientoTypeBadge = (mov: string, origen?: string, destino?: s
   return { label: `MOV ${mov}`, bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
 };
 
+export const renderStockBadge = (tipoStockRaw: string) => {
+  const tipoStock = String(tipoStockRaw || '').toUpperCase();
+  if (!tipoStock || tipoStock === 'UNDEFINED' || tipoStock === 'NULL') {
+    return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+  }
+
+  let stockLabel = 'L.UTILIZACION';
+  let stockColor = '#15803d'; // green
+  let stockBg = '#dcfce7';
+
+  if (tipoStock === 'BLOQUEADO') {
+    stockLabel = 'BLOQUEADO';
+    stockColor = '#b91c1c'; // red
+    stockBg = '#fee2e2';
+  } else if (tipoStock === 'CALIDAD') {
+    stockLabel = 'C.CALIDAD';
+    stockColor = '#b45309'; // orange
+    stockBg = '#fef3c7';
+  }
+
+  return (
+    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: stockColor, background: stockBg, padding: '3px 8px', borderRadius: '12px', border: `1px solid ${stockColor}40`, whiteSpace: 'nowrap' }}>
+      {stockLabel}
+    </span>
+  );
+};
+
 interface InventoryTableProps {
   loading: boolean;
   filteredAdjustments: AdjustmentHeader[];
@@ -53,7 +80,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
         <table className="data-table">
           <thead>
             <tr>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>FOLIO</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>FECHA</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>OPERACIÓN SAP</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>ESTADO SAP</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>REF. SAP</th>
@@ -61,18 +88,17 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>LOTE SAP</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>ORIGEN</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>DESTINO</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>TIPO STOCK</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>STOCK ORIGEN</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>STOCK DESTINO</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>CANTIDAD</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>CENTRO</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>FECHA</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center' }}></th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>VER</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={13} style={{ textAlign: 'center', padding: '2rem' }}>Cargando movimientos e información desde la BD...</td></tr>
+              <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem' }}>Cargando movimientos e información desde la BD...</td></tr>
             ) : filteredAdjustments.length === 0 ? (
-              <tr><td colSpan={13} style={{ textAlign: 'center', padding: '2rem' }}>No se encontraron registros en esta vista con los filtros seleccionados.</td></tr>
+              <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem' }}>No se encontraron registros en esta vista con los filtros seleccionados.</td></tr>
             ) : (
               filteredAdjustments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((header) => (
                 <React.Fragment key={header.ID}>
@@ -83,6 +109,8 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     const estadoUpper = (header.Estado_SAP || '').toUpperCase();
                     if (estadoUpper === 'PROCESADO' || estadoUpper === 'EXITOSO' || estadoUpper === 'COMPLETADO') {
                       estadoSapBadge = { label: 'Sincronizado', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
+                    } else if (estadoUpper === 'RECHAZADO') {
+                      estadoSapBadge = { label: 'Requiere Supervisión', bg: '#ffedd5', color: '#c2410c', border: '#fed7aa' };
                     } else if (estadoUpper.includes('ERROR') || estadoUpper.includes('FALLO')) {
                       estadoSapBadge = { label: 'Fallo SAP', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
                     }
@@ -97,8 +125,16 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                         onClick={() => { setSelectedAjuste({ header, detalle: det }); }}
                       >
-                        <td style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>
-                          {header.Nro_Ajuste}
+                        <td style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.8rem' }}>
+                              {(() => {
+                                const d = new Date(String(header.Fecha_Creacion).replace('Z', ''));
+                                return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                              })()}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(String(header.Fecha_Creacion).replace('Z', '')).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                          </div>
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', background: movBadge.bg, color: movBadge.color, border: `1px solid ${movBadge.border}`, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -136,7 +172,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         <td style={{ padding: '12px 16px', textAlign: 'center', position: 'relative' }}>
                           {det.Almacen_Origen ? (
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', fontFamily: 'monospace' }}>Alm {det.Almacen_Origen}</span>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', fontFamily: 'monospace' }}>{det.Almacen_Origen}</span>
                             </div>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>-</span>
@@ -148,44 +184,28 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           {det.Almacen_Destino ? (
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', fontFamily: 'monospace' }}>Alm {det.Almacen_Destino}</span>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', fontFamily: 'monospace' }}>{det.Almacen_Destino}</span>
                             </div>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>-</span>
                           )}
                         </td>
 
+                        <td style={{ padding: '12px 16px', textAlign: 'center', position: 'relative' }}>
+                          {((det as any).StockOrigen || (det as any).stockorigen) ?
+                            renderStockBadge((det as any).StockOrigen || (det as any).stockorigen) :
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          }
+
+                          {((det as any).StockOrigen || (det as any).stockorigen) && ((det as any).StockDestino || (det as any).stockdestino) && (
+                            <ArrowRight className="transfer-arrow" size={14} style={{ color: 'var(--primary-main)', position: 'absolute', right: '-7px', top: '50%', marginTop: '-7px', zIndex: 10 }} />
+                          )}
+                        </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          {(() => {
-                            const detAny = det as any;
-                            let tipoStock = String(detAny.TipoStockDestino || detAny.tipo_stock_destino || detAny.tipostockdestino || '').toUpperCase();
-                            
-                            // Asignación inteligente en base al tipo de movimiento si viene vacío
-                            if (!tipoStock) {
-                              if (det.Tipo_Movimiento === '555') tipoStock = 'BLOQUEADO';
-                              else if (['553', '331', '333'].includes(det.Tipo_Movimiento)) tipoStock = 'CALIDAD';
-                            }
-
-                            let stockLabel = 'L.UTILIZACION';
-                            let stockColor = '#15803d'; // green
-                            let stockBg = '#dcfce7';
-
-                            if (tipoStock === 'BLOQUEADO') {
-                              stockLabel = 'BLOQUEADO';
-                              stockColor = '#b91c1c'; // red
-                              stockBg = '#fee2e2';
-                            } else if (tipoStock === 'CALIDAD') {
-                              stockLabel = 'C.CALIDAD';
-                              stockColor = '#b45309'; // orange
-                              stockBg = '#fef3c7';
-                            }
-
-                            return (
-                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: stockColor, background: stockBg, padding: '3px 8px', borderRadius: '12px', border: `1px solid ${stockColor}40`, whiteSpace: 'nowrap' }}>
-                                {stockLabel}
-                              </span>
-                            );
-                          })()}
+                          {((det as any).StockDestino || (det as any).stockdestino) ?
+                            renderStockBadge((det as any).StockDestino || (det as any).stockdestino) :
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          }
                         </td>
 
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -193,9 +213,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                             const esEgreso = ['711', '717', '551', '553', '555', '331', '333'].includes(det.Tipo_Movimiento);
                             const cantidadReal = esEgreso ? -Math.abs(det.Cantidad) : det.Cantidad;
                             return (
-                              <span style={{ 
-                                fontWeight: 600, 
-                                color: cantidadReal > 0 ? 'var(--success-text)' : (cantidadReal < 0 ? 'var(--danger-text)' : 'inherit') 
+                              <span style={{
+                                fontWeight: 600,
+                                color: cantidadReal > 0 ? 'var(--success-text)' : (cantidadReal < 0 ? 'var(--danger-text)' : 'inherit')
                               }}>
                                 {cantidadReal > 0 ? '+' + cantidadReal : cantidadReal} Un.
                               </span>
@@ -203,18 +223,8 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                           })()}
                         </td>
 
-                        <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>
-                          {header.Centro || '1000'}
-                        </td>
-
-                        <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <span>{new Date(String(header.Fecha_Creacion).replace('Z', '')).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(String(header.Fecha_Creacion).replace('Z', '')).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-                          </div>
-                        </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />
+                          <Eye size={16} style={{ color: 'var(--text-muted)' }} />
                         </td>
                       </tr>
                     );

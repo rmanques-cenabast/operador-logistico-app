@@ -25,6 +25,8 @@ export interface AdjustmentDetail {
   Posicion_OC?: number;
   Almacen_Origen?: string;
   Almacen_Destino?: string;
+  StockOrigen?: string;
+  StockDestino?: string;
 }
 
 export interface AdjustmentHeader {

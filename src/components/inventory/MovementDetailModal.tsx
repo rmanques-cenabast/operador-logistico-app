@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Package, FileText, Database, ArrowRightLeft, Building2, User, Calendar, CheckCircle2 } from 'lucide-react';
+import { X, Package, Database, Truck, Grid, Building2, User, Calendar, CheckCircle2, MessageSquare, ArrowRight, FileText, ArrowRightLeft, AlertCircle } from 'lucide-react';
 import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 
 interface MovementDetailModalProps {
@@ -8,181 +8,223 @@ interface MovementDetailModalProps {
   onClose: () => void;
 }
 
-export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header, detalle, onClose }) => {
+const renderBadge = (tipoStockRaw: string | undefined | null) => {
+  const tipoStock = String(tipoStockRaw || '').toUpperCase();
+  if (!tipoStock || tipoStock === 'UNDEFINED' || tipoStock === 'NULL') {
+    return <span style={{ color: 'var(--text-muted)' }}>-</span>;
+  }
+  let stockLabel = 'L. UTILIZACIÓN';
+  let stockColor = '#15803d';
+  let stockBg = '#dcfce7';
+  if (tipoStock === 'BLOQUEADO') {
+    stockLabel = 'BLOQUEADO';
+    stockColor = '#b91c1c';
+    stockBg = '#fee2e2';
+  } else if (tipoStock === 'CALIDAD') {
+    stockLabel = 'C. CALIDAD';
+    stockColor = '#b45309';
+    stockBg = '#fef3c7';
+  }
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ width: '840px', maxWidth: '95vw', borderRadius: '10px' }}>
+    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: stockColor, background: stockBg, padding: '3px 8px', borderRadius: '4px', border: `1px solid ${stockColor}40`, whiteSpace: 'nowrap' }}>
+      {stockLabel}
+    </span>
+  );
+};
+
+export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header, detalle, onClose }) => {
+  // Determine success status for the badge
+  const estadoUpper = (header.Estado_SAP || '').toUpperCase();
+  const isExitoso = estadoUpper === 'PROCESADO' || estadoUpper === 'EXITOSO' || estadoUpper === 'COMPLETADO';
+  
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ width: '600px', maxWidth: '95vw', background: '#f8fafc', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         
-        {/* ENCABEZADO MINIMALISTA Y LIMPIO */}
-        <div className="panel-header" style={{ padding: '18px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white' }}>
+        {/* ENCABEZADO */}
+        <div style={{ padding: '24px', background: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0' }}>
           
-          {/* IZQUIERDA: CÓDIGO MATERIAL Y LOTE */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Package color="#475569" size={20} />
+          {/* IZQUIERDA: ICONO + TÍTULOS */}
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Package color="white" size={24} />
             </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 700, lineHeight: 1.2 }}>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 600, letterSpacing: '-0.02em' }}>
                 ZCEN: {detalle.Codigo_Material}
               </h3>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '3px', fontSize: '0.82rem', color: '#64748b' }}>
-                <span>Lote SAP: <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{detalle.Lote_SAP}</strong></span>
-                <span>•</span>
-                <span>Línea: <strong style={{ color: '#0f172a' }}>{header.Linea_Negocio || 'CENABAST'}</strong></span>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isExitoso ? (
+                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700, border: '1px solid #bbf7d0' }}>
+                     <CheckCircle2 size={12} /> PROCESADO EN SAP
+                   </span>
+                ) : (
+                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700, border: '1px solid #fde68a' }}>
+                     PENDIENTE EN SAP
+                   </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', fontSize: '0.8rem', color: '#475569' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Grid size={14} color="#94a3b8" />
+                  <span>Lote SAP: <strong style={{ color: '#0f172a' }}>{detalle.Lote_SAP || 'N/A'}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Building2 size={14} color="#94a3b8" />
+                  <span>Línea: <strong style={{ color: '#0f172a' }}>{header.Linea_Negocio || 'CENABAST'}</strong></span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* DERECHA: CHIPS UNIFORMES Y BOTÓN DE CIERRE */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.78rem', color: '#475569', background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontWeight: 500 }}>
-              OC: {detalle.Numero_OC || 'Sin OC'} {detalle.Posicion_OC ? `(Pos ${detalle.Posicion_OC})` : ''}
-            </span>
-            <span style={{ fontSize: '0.78rem', color: '#475569', background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontWeight: 500 }}>
-              Folio: <strong style={{ color: '#0f172a' }}>{header.Nro_Ajuste}</strong>
-            </span>
-            {header.Centro && (
-              <span style={{ fontSize: '0.78rem', color: '#475569', background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontWeight: 500 }}>
-                Centro: <strong style={{ color: '#0f172a' }}>{header.Centro}</strong>
-              </span>
-            )}
-
-            <button 
-              onClick={onClose}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '6px', borderRadius: '6px', marginLeft: '4px', transition: 'all 0.15s' }}
-              onMouseOver={e => { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.background = '#f1f5f9'; }}
-              onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
-            >
-              <X size={18} />
+          {/* DERECHA: CAJAS Y CERRAR */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.75rem', color: '#64748b' }}>
+                <span>OC:</span>
+                <strong style={{ color: '#0f172a', fontSize: '0.8rem' }}>{detalle.Numero_OC ? `${detalle.Numero_OC}` : 'Sin OC'}</strong>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.75rem', color: '#64748b' }}>
+                <span>Folio:</span>
+                <strong style={{ color: '#0f172a', fontSize: '0.8rem' }}>{header.Nro_Ajuste}</strong>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.75rem', color: '#64748b' }}>
+                <span>Centro:</span>
+                <strong style={{ color: '#0f172a', fontSize: '0.8rem' }}>{header.Centro || '6000'}</strong>
+              </div>
+            </div>
+            
+            <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}>
+              <X size={20} />
             </button>
           </div>
-
         </div>
 
-        <div className="panel-content" style={{ padding: '24px', background: 'var(--app-bg)', borderBottomLeftRadius: '10px', borderBottomRightRadius: '10px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* CONTENIDO PRINCIPAL */}
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', background: '#f8fafc' }}>
+          
+          {/* FLUJO DE STOCK */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              FLUJO DE STOCK (MOV. {detalle.Tipo_Movimiento})
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 40px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
               
-              {/* BANNER DIAGRAMA DE TRASLADO MEJOR ESTRUCTURADO */}
-              {['311', '321', '344', '309'].includes(detalle.Tipo_Movimiento) || (detalle.Almacen_Origen && detalle.Almacen_Destino && detalle.Almacen_Origen !== detalle.Almacen_Destino) ? (
-                <div style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '16px 20px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ArrowRightLeft size={14} color="#0284c7" /> Flujo Físico de Reubicación de Almacenes
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#475569' }}>Stock Origen</span>
+                {renderBadge((detalle as any).StockOrigen || (detalle as any).stockorigen)}
+              </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    
-                    {/* ALMACÉN ORIGEN */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bae6fd' }}>
-                        <Building2 size={18} color="#0369a1" />
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', display: 'block' }}>ALMACÉN ORIGEN</span>
-                        <strong style={{ fontSize: '1.1rem', color: '#0f172a', fontFamily: 'monospace' }}>Almacén {detalle.Almacen_Origen || '6001'}</strong>
-                      </div>
-                    </div>
-
-                    {/* FLECHA Y CANTIDAD DE TRASLADO */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, padding: '0 24px' }}>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0284c7', background: 'white', padding: '4px 14px', borderRadius: '16px', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-                        <Package size={13} /> +{detalle.Cantidad} Unidades (Clase {detalle.Tipo_Movimiento})
-                      </span>
-                      <div style={{ width: '100%', height: '2px', background: 'linear-gradient(to right, #0284c7, #0369a1)', borderRadius: '2px', position: 'relative', marginTop: '4px' }}>
-                        <div style={{ position: 'absolute', right: '-4px', top: '-4px', width: '0', height: '0', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '8px solid #0369a1' }}></div>
-                      </div>
-                    </div>
-
-                    {/* ALMACÉN DESTINO */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', display: 'block' }}>ALMACÉN DESTINO</span>
-                        <strong style={{ fontSize: '1.1rem', color: '#0f172a', fontFamily: 'monospace' }}>Almacén {detalle.Almacen_Destino || '6009'}</strong>
-                      </div>
-                      <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bbf7d0' }}>
-                        <Building2 size={18} color="#15803d" />
-                      </div>
-                    </div>
-
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, padding: '0 20px' }}>
+                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a' }}>
+                  +{detalle.Cantidad} Un.
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '8px', color: '#cbd5e1' }}>
+                  <div style={{ height: '1px', background: '#e2e8f0', flex: 1 }}></div>
+                  <Truck size={16} />
+                  <div style={{ height: '1px', background: '#e2e8f0', flex: 1 }}></div>
+                  <ArrowRight size={14} style={{ marginLeft: '-4px' }} />
                 </div>
-              ) : null}
+              </div>
 
-              {/* TARJETAS DE INFORMACIÓN SAP Y WMS ARMONIZADAS */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                
-                {/* CARD SAP */}
-                <div style={{ background: 'white', padding: '16px 20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Database size={15} color="var(--primary-main)" /> Contabilización SAP
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Documento Material:</span>
-                      <span style={{ fontFamily: 'monospace', color: '#0369a1', fontWeight: 700, background: '#f0f9ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bae6fd', fontSize: '0.88rem' }}>
-                        {header.Documento_SAP_Ref || 'Pendiente'}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Clase de Movimiento:</span>
-                      <strong style={{ color: '#0f172a' }}>Mov. {detalle.Tipo_Movimiento}</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Centro Logístico:</span>
-                      <strong style={{ color: '#0f172a' }}>Centro {header.Centro || '1000'}</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Línea de Negocio:</span>
-                      <strong style={{ color: '#0f172a' }}>{header.Linea_Negocio || 'CENABAST'}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CARD WMS */}
-                <div style={{ background: 'white', padding: '16px 20px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <FileText size={15} color="var(--primary-main)" /> Registro Operativo WMS
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem', flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><User size={13} /> Operador:</span>
-                      <strong style={{ color: '#0f172a' }}>{header.Usuario_OL}</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={13} /> Fecha Registro:</span>
-                      <strong style={{ color: '#0f172a' }}>{new Date(header.Fecha_Creacion).toLocaleString('es-CL')}</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Folio Transacción:</span>
-                      <strong style={{ color: '#0f172a' }}>{header.Nro_Ajuste}</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Estado Transacción:</span>
-                      <span style={{ color: '#15803d', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <CheckCircle2 size={13} color="#15803d" /> PROCESADO EN SAP
-                      </span>
-                    </div>
-
-                    {/* MOTIVO REUBICADO */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>Observaciones / Motivo:</span>
-                      <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', color: '#334155', fontStyle: detalle.Motivo ? 'normal' : 'italic' }}>
-                        {detalle.Motivo || 'Sin observaciones registradas.'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#475569' }}>Stock Destino</span>
+                {renderBadge((detalle as any).StockDestino || (detalle as any).stockdestino)}
               </div>
             </div>
+          </div>
+
+          <div style={{ height: '1px', background: '#e2e8f0', margin: '0 -24px' }}></div>
+
+          {/* LISTAS DE DETALLES */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* CONTABILIZACION SAP */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <Database size={14} /> CONTABILIZACIÓN SAP
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><FileText size={14} /> Doc. Material</span>
+                <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{header.Documento_SAP_Ref || 'Pendiente'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><ArrowRightLeft size={14} /> Clase Mov.</span>
+                <strong style={{ color: '#0f172a' }}>{detalle.Tipo_Movimiento}</strong>
+              </div>
+            </div>
+
+            {/* REGISTRO WMS */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <FileText size={14} /> REGISTRO WMS
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><User size={14} /> Operador</span>
+                <strong style={{ color: '#0f172a' }}>{header.Usuario_OL}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> Fecha Registro</span>
+                <span style={{ color: '#475569' }}>
+                  {(() => {
+                     const d = new Date(String(header.Fecha_Creacion).replace('Z', ''));
+                     let ampm = d.getHours() >= 12 ? 'p.m.' : 'a.m.';
+                     return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}, ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${ampm}`;
+                  })()}
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* MENSAJE DE RECHAZO / ERROR SAP (Si existe) */}
+          {(() => {
+            if (!header.logsSap || header.logsSap.length === 0) return null;
+            const ultimoLog = header.logsSap[header.logsSap.length - 1];
+            if (!ultimoLog.Respuesta_SAP) return null;
+            
+            let errorText = '';
+            try {
+              const res = JSON.parse(ultimoLog.Respuesta_SAP);
+              if (res.mensajes && Array.isArray(res.mensajes) && res.mensajes.length > 0) {
+                errorText = res.mensajes.map((m: any) => `[${m.tipo}] ${m.mensaje}`).join(' | ');
+              } else if (res.error) {
+                errorText = res.error;
+              }
+            } catch (e) {
+              errorText = ultimoLog.Respuesta_SAP;
+            }
+
+            if (!errorText) return null;
+
+            return (
+              <div style={{ background: '#fef2f2', padding: '16px', borderRadius: '6px', border: '1px solid #fecaca', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#991b1b', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase' }}>
+                  <AlertCircle size={14} /> Detalle de Respuesta SAP
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#7f1d1d', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
+                  {errorText}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* OBSERVACIONES */}
+          <div style={{ background: '#f1f5f9', padding: '16px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MessageSquare size={14} /> Observaciones / Motivo
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#0f172a' }}>
+              {detalle.Motivo || 'Sin observaciones registradas.'}
+            </div>
+          </div>
+
         </div>
+
       </div>
     </div>
   );
