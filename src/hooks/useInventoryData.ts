@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URL } from '../config/api';
 
 export interface SapLog {
   IdLog: number;
@@ -49,7 +50,7 @@ export const useInventoryData = () => {
 
   const fetchAdjustments = (silent = false) => {
     if (!silent) setLoading(true);
-    fetch('http://localhost:3000/api/v1/ol/inventory/adjustments?limit=1000')
+    fetch(`${API_URL}/ol/inventory/adjustments?limit=1000`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success' && data.data) {

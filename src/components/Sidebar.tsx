@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LogIn, Box, LogOut, ChevronDown, ChevronRight, Menu, Database, ArrowRightLeft, Trash2, Scale, FlaskConical, Gift, FileText } from 'lucide-react';
+import { LogIn, BarChart2, Box, LogOut, ChevronDown, ChevronRight, Menu, Database } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar: React.FC = () => {
   const [isEntradaOpen, setIsEntradaOpen] = useState(false);
   const [isMaestrosOpen, setIsMaestrosOpen] = useState(false);
   const [isInventarioOpen, setIsInventarioOpen] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user } = useAuth();
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`} style={{ position: 'relative' }}>
@@ -19,9 +21,21 @@ const Sidebar: React.FC = () => {
         gap: isCollapsed ? '16px' : '0'
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: isCollapsed ? 'center' : 'flex-start', width: isCollapsed ? '100%' : 'auto' }}>
-          {!isCollapsed && <h1 className="sidebar-title">CENABAST OL</h1>}
-          {!isCollapsed && <div className="sidebar-subtitle">Terminal A-12</div>}
-          {isCollapsed && <h1 className="sidebar-title" style={{ fontSize: '1.2rem', textAlign: 'center' }}>C</h1>}
+          {!isCollapsed && (
+            <h1 className="sidebar-title" style={{ marginBottom: 0 }}>
+              {user?.role === 'intermediacion' ? 'INTERMEDIACIÓN' : 
+               user?.role === 'farmacias' ? 'F. PRIVADAS' : 
+               'CENABAST'}
+            </h1>
+          )}
+          
+          {isCollapsed && (
+            <h1 className="sidebar-title" style={{ fontSize: '1.2rem', textAlign: 'center', marginBottom: 0 }}>
+              {user?.role === 'intermediacion' ? 'I' : 
+               user?.role === 'farmacias' ? 'F' : 
+               'C'}
+            </h1>
+          )}
         </div>
         
         <button
@@ -43,7 +57,7 @@ const Sidebar: React.FC = () => {
         </button>
       </div>
 
-      <nav className="nav-links" style={{ padding: isCollapsed ? '16px 8px' : '24px' }}>
+      <nav className="nav-links" style={{ padding: isCollapsed ? '16px 8px' : '24px 12px' }}>
         {/* ENTRADA */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <NavLink
@@ -109,22 +123,22 @@ const Sidebar: React.FC = () => {
           {isInventarioOpen && !isCollapsed && (
             <div className="submenu">
               <NavLink to="/inventario" end className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
-                <FileText size={15} style={{ flexShrink: 0 }} /> <span>Registros Generales</span>
+                 <span>Registros hist.</span>
               </NavLink>
               <NavLink to="/inventario/traspasos" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
-                <ArrowRightLeft size={15} style={{ flexShrink: 0 }} /> <span>Traspasos e Internos</span>
+                 <span>Traslado Alm.</span>
               </NavLink>
               <NavLink to="/inventario/mermas" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
-                <Trash2 size={15} style={{ flexShrink: 0 }} /> <span>Mermas y Destrucción</span>
+                 <span>Mermas</span>
               </NavLink>
               <NavLink to="/inventario/conteos" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
-                <Scale size={15} style={{ flexShrink: 0 }} /> <span>Conteos Cíclicos</span>
+                 <span>Conteo ciclico</span>
               </NavLink>
               <NavLink to="/inventario/muestras" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
-                <FlaskConical size={15} style={{ flexShrink: 0 }} /> <span>Muestreos ISP</span>
+                 <span>Muestreo ISP</span>
               </NavLink>
               <NavLink to="/inventario/entradas-especiales" className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
-                <Gift size={15} style={{ flexShrink: 0 }} /> <span>Entradas Especiales</span>
+                 <span>Entradas Esp.</span>
               </NavLink>
             </div>
           )}
@@ -180,9 +194,27 @@ const Sidebar: React.FC = () => {
             </div>
           )}
         </div>
+        {/* REPORTES */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <NavLink 
+            to="/reportes" 
+            className={({ isActive }) => "nav-item " + (isActive ? 'active' : '')}
+            style={{ 
+              justifyContent: isCollapsed ? 'center' : 'flex-start', 
+              padding: isCollapsed ? '12px' : '10px 12px' 
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <BarChart2 size={18} />
+              {!isCollapsed && <span>Reportes</span>}
+            </div>
+          </NavLink>
+        </div>
       </nav>
     </aside>
   );
 };
 
 export default Sidebar;
+
+// force reload 639225682422583862

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Box, LogOut } from 'lucide-react';
+import { Search, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
   searchPlaceholder?: string;
@@ -8,14 +9,12 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ searchPlaceholder = "Buscar Pre Avisos, OC o Productos...", showSearch = true }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <header className="top-header" style={{ display: 'flex', alignItems: 'center', padding: '16px 32px', gap: '24px', minHeight: '72px', borderBottom: '1px solid var(--border-color)', background: 'white' }}>
       <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ background: 'var(--primary-main)', color: 'white', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Box size={22} />
-        </div>
-        <div className="header-title" style={{ fontSize: '1.25rem', color: 'var(--text-main)', whiteSpace: 'nowrap', fontWeight: 700 }}>Operador WMS</div>
+        <div className="header-title" style={{ fontSize: '1.25rem', color: 'var(--text-main)', whiteSpace: 'nowrap', fontWeight: 700 }}>Operador Logístico</div>
       </div>
       
       <div style={{ marginLeft: 'auto', width: '100%', maxWidth: '480px', position: 'relative' }}>
@@ -39,8 +38,9 @@ const Header: React.FC<HeaderProps> = ({ searchPlaceholder = "Buscar Pre Avisos,
               background: 'linear-gradient(135deg, var(--text-main) 0%, #475569 100%)', 
               color: '#fff',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              cursor: 'pointer'
-            }}>OP</div>
+              cursor: 'pointer',
+              textTransform: 'uppercase'
+            }}>{user?.username?.substring(0, 2) || 'OP'}</div>
 
             {showMenu && (
               <div style={{
@@ -57,8 +57,8 @@ const Header: React.FC<HeaderProps> = ({ searchPlaceholder = "Buscar Pre Avisos,
                 animation: 'fadeIn 0.2s ease-out'
               }}>
                 <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', background: '#f8fafc' }}>
-                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>Operador Logístico</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>operador@cenabast.cl</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem', textTransform: 'capitalize' }}>{user?.username || 'Operador Logístico'}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px', textTransform: 'capitalize' }}>Rol: {user?.role || 'operador@cenabast.cl'}</div>
                 </div>
                 
                 <div style={{ padding: '8px' }}>
@@ -80,7 +80,10 @@ const Header: React.FC<HeaderProps> = ({ searchPlaceholder = "Buscar Pre Avisos,
                     }}
                     onMouseOver={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#b91c1c'; }}
                     onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ef4444'; }}
-                    onClick={() => setShowMenu(false)}
+                    onClick={() => {
+                      setShowMenu(false);
+                      logout();
+                    }}
                   >
                     <LogOut size={16} />
                     Cerrar sesión

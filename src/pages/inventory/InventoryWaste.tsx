@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import Header from '../../components/Header';
 import { useInventoryData, AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { InventoryFilters } from '../../components/inventory/InventoryFilters';
 import { InventoryTable } from '../../components/inventory/InventoryTable';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const InventoryWaste: React.FC = () => {
   const { adjustments, loading, fetchAdjustments } = useInventoryData();
@@ -139,35 +138,7 @@ const InventoryWaste: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ height: '240px', width: '100%' }}>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorMermasFull" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--danger-main)" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="var(--danger-main)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Tooltip
-                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '0.85rem' }}
-                    itemStyle={{ color: 'var(--danger-main)', fontWeight: 600 }}
-                    labelStyle={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '4px' }}
-                    formatter={(value: any) => [`${value ?? 0} Unidades`, 'Pérdida']}
-                  />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} dy={10} />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} dx={-10} allowDecimals={false} tickFormatter={(value) => value.toLocaleString('es-CL')} />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
-                  <Area type="monotone" dataKey="Unidades" stroke="var(--danger-main)" strokeWidth={3} fillOpacity={1} fill="url(#colorMermasFull)" activeDot={{ r: 6, strokeWidth: 2, stroke: 'white' }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ width: '100%', height: '100%', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', background: 'var(--app-bg)', borderRadius: '6px' }}>
-                Sin mermas registradas
-              </div>
-            )}
           </div>
-        </div>
 
         <InventoryFilters 
           activeTab="mermas"

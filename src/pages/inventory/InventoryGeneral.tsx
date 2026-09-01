@@ -57,43 +57,11 @@ const InventoryGeneral: React.FC = () => {
     });
   }, [adjustments, selectedTipoStock, selectedTipoMov, searchTerm]);
 
-  const totalDetalles = adjustments.reduce((acc, header) => acc + header.detalles.length, 0);
-  const salidasStock = adjustments.reduce((acc, header) =>
-    acc + header.detalles.filter(d => d.Cantidad < 0).reduce((sum, d) => sum + Math.abs(d.Cantidad), 0)
-  , 0);
-  const entradasStock = adjustments.reduce((acc, header) =>
-    acc + header.detalles.filter(d => d.Cantidad > 0).reduce((sum, d) => sum + d.Cantidad, 0)
-  , 0);
-  const impactoNeto = entradasStock - salidasStock;
-
-  const traspasosConFecha = adjustments.flatMap(h =>
-    h.detalles.filter(d => ['311', '321', '344', '343', '309'].includes(d.Tipo_Movimiento) || (d.Almacen_Origen && d.Almacen_Destino))
-  );
-  const totalTraspasos = traspasosConFecha.length;
-
   return (
     <>
       <Header showSearch={false} />
       <main className="page-content">
-        <h2 className="page-title">Registros y Movimientos Generales WMS / SAP</h2>
-        <p className="page-subtitle">Consolidador general de movimientos de inventario con auditoría BAPI_GOODSMVT_CREATE.</p>
-
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-          <div className="metric-card" style={{ padding: '16px 20px', minHeight: 'unset', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <div className="metric-title" style={{ fontSize: '0.7rem' }}>TOTAL MOVIMIENTOS</div>
-            <div className="metric-value" style={{ fontSize: '1.75rem', marginTop: '4px' }}>{totalDetalles}</div>
-          </div>
-          <div className="metric-card" style={{ padding: '16px 20px', minHeight: 'unset', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <div className="metric-title" style={{ fontSize: '0.7rem' }}>TRASPASOS REALIZADOS (311)</div>
-            <div className="metric-value" style={{ fontSize: '1.75rem', marginTop: '4px', color: 'var(--primary-main)' }}>{totalTraspasos}</div>
-          </div>
-          <div className="metric-card" style={{ padding: '16px 20px', minHeight: 'unset', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <div className="metric-title" style={{ fontSize: '0.7rem' }}>IMPACTO NETO DE STOCK</div>
-            <div className="metric-value" style={{ fontSize: '1.75rem', marginTop: '4px', color: impactoNeto > 0 ? 'var(--info-main)' : (impactoNeto < 0 ? 'var(--danger-main)' : 'inherit') }}>
-              {impactoNeto > 0 ? '+' : ''}{impactoNeto.toLocaleString()} Un.
-            </div>
-          </div>
-        </div>
+        <h2 className="page-title" style={{ marginBottom: '24px' }}>Registros y movimientos generales</h2>
 
         <InventoryFilters 
           activeTab="generales"

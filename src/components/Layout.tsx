@@ -6,8 +6,10 @@ const Layout: React.FC = () => {
   return (
     <div className="layout">
       <Sidebar />
-      <div className="main-content">
-        <Outlet />
+      <div className="main-content" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <Outlet />
+        </div>
       </div>
     </div>
   );

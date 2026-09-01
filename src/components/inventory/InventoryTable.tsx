@@ -1,29 +1,29 @@
 import React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, ArrowRight, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight, Eye } from 'lucide-react';
 import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { MovementDetailModal } from './MovementDetailModal';
 
 export const getMovimientoTypeBadge = (mov: string, origen?: string, destino?: string) => {
   if (mov === '311' || (origen && destino && origen !== destino)) {
-    return { label: 'TRASPASO (311)', bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' };
+    return { label: '(311)', bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' };
   } else if (mov === '321') {
-    return { label: 'LIBERADO (321)', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
+    return { label: '(321)', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
   } else if (mov === '344') {
-    return { label: 'CUARENTENA (344)', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
+    return { label: '(344)', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
   } else if (mov === '343') {
-    return { label: 'DESBLOQUEO (343)', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
+    return { label: '(343)', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
   } else if (mov === '309') {
-    return { label: 'RECLASIF. SKU (309)', bg: '#f3e8ff', color: '#6b21a8', border: '#e9d5ff' };
+    return { label: '(309)', bg: '#f3e8ff', color: '#6b21a8', border: '#e9d5ff' };
   } else if (mov === '555' || mov === '556') {
-    return { label: 'DESGUACE (555)', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
+    return { label: '(555)', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
   } else if (mov === '711' || mov === '717') {
-    return { label: 'FALTANTE (711)', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
+    return { label: '(711)', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
   } else if (mov === '712' || mov === '718') {
-    return { label: 'SOBRANTE (712)', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
+    return { label: '(712)', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
   } else if (mov === '331' || mov === '333') {
-    return { label: 'MUESTREO (331)', bg: '#e0e7ff', color: '#4338ca', border: '#c7d2fe' };
+    return { label: '(331)', bg: '#e0e7ff', color: '#4338ca', border: '#c7d2fe' };
   } else if (mov === '511') {
-    return { label: 'ENTRADA SIN OC (511)', bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+    return { label: '(511)', bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
   }
   return { label: `MOV ${mov}`, bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
 };
@@ -74,6 +74,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   selectedAjuste,
   setSelectedAjuste
 }) => {
+  const flattenedRows = React.useMemo(() => {
+    return filteredAdjustments.flatMap(header => header.detalles.map((det, index) => ({ header, det, index })));
+  }, [filteredAdjustments]);
+
   return (
     <>
       <div className="data-table-container" style={{ width: '100%', background: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
@@ -97,20 +101,18 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
           <tbody>
             {loading ? (
               <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem' }}>Cargando movimientos e información desde la BD...</td></tr>
-            ) : filteredAdjustments.length === 0 ? (
+            ) : flattenedRows.length === 0 ? (
               <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem' }}>No se encontraron registros en esta vista con los filtros seleccionados.</td></tr>
             ) : (
-              filteredAdjustments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((header) => (
-                <React.Fragment key={header.ID}>
-                  {header.detalles.map((det, j) => {
-                    const rowKey = `${header.ID}-${j}`;
+              flattenedRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(({ header, det, index: j }) => {
+                const rowKey = `${header.ID}-${j}`;
 
                     let estadoSapBadge = { label: 'Pendiente', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
                     const estadoUpper = (header.Estado_SAP || '').toUpperCase();
                     if (estadoUpper === 'PROCESADO' || estadoUpper === 'EXITOSO' || estadoUpper === 'COMPLETADO') {
                       estadoSapBadge = { label: 'Sincronizado', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
                     } else if (estadoUpper === 'RECHAZADO') {
-                      estadoSapBadge = { label: 'Requiere Supervisión', bg: '#ffedd5', color: '#c2410c', border: '#fed7aa' };
+                      estadoSapBadge = { label: 'Supervisión', bg: '#ffedd5', color: '#c2410c', border: '#fed7aa' };
                     } else if (estadoUpper.includes('ERROR') || estadoUpper.includes('FALLO')) {
                       estadoSapBadge = { label: 'Fallo SAP', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
                     }
@@ -228,16 +230,14 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         </td>
                       </tr>
                     );
-                  })}
-                </React.Fragment>
-              ))
+                })
             )}
           </tbody>
         </table>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: '1px solid var(--border-color)', background: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: '1px solid var(--border-color)', background: 'white' }}>
           <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            Mostrando resultados {filteredAdjustments.length === 0 ? 0 : Math.min((currentPage - 1) * itemsPerPage + 1, filteredAdjustments.length)} al {Math.min(currentPage * itemsPerPage, filteredAdjustments.length)} de un total de {filteredAdjustments.length} movimientos
+            Mostrando resultados {flattenedRows.length === 0 ? 0 : Math.min((currentPage - 1) * itemsPerPage + 1, flattenedRows.length)} al {Math.min(currentPage * itemsPerPage, flattenedRows.length)} de un total de {flattenedRows.length} movimientos
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -248,12 +248,12 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               <ChevronLeft size={16} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-main)' }}>
-              Página {currentPage} de {Math.max(1, Math.ceil(filteredAdjustments.length / itemsPerPage))}
+              Página {currentPage} de {Math.max(1, Math.ceil(flattenedRows.length / itemsPerPage))}
             </div>
             <button
-              onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredAdjustments.length / itemsPerPage), p + 1))}
-              disabled={currentPage >= Math.ceil(filteredAdjustments.length / itemsPerPage)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage >= Math.ceil(filteredAdjustments.length / itemsPerPage) ? '#f8fafc' : 'white', color: currentPage >= Math.ceil(filteredAdjustments.length / itemsPerPage) ? '#94a3b8' : 'var(--text-main)', cursor: currentPage >= Math.ceil(filteredAdjustments.length / itemsPerPage) ? 'not-allowed' : 'pointer' }}
+              onClick={() => setCurrentPage(p => Math.min(Math.ceil(flattenedRows.length / itemsPerPage), p + 1))}
+              disabled={currentPage >= Math.ceil(flattenedRows.length / itemsPerPage)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage >= Math.ceil(flattenedRows.length / itemsPerPage) ? '#f8fafc' : 'white', color: currentPage >= Math.ceil(flattenedRows.length / itemsPerPage) ? '#94a3b8' : 'var(--text-main)', cursor: currentPage >= Math.ceil(flattenedRows.length / itemsPerPage) ? 'not-allowed' : 'pointer' }}
             >
               <ChevronRight size={16} />
             </button>
