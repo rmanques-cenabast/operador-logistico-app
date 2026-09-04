@@ -114,5 +114,13 @@ export const ArrivalsService = {
   getPoReleaseStatus: async (poNumber: string) => {
     const res = await fetch(`${API_URL}/ol/inbound/po/${poNumber}/release-status`);
     return await res.json();
+  },
+
+  adjuntarDocumentoASap: async (documentId: number) => {
+    const res = await fetch(`${API_URL}/ol/inbound/documents/${documentId}/adjuntar-sap`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return await res.json();
   }
 };
