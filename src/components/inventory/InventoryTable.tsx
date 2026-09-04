@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, ArrowRight, Eye } from 'lucide-react';
 import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { MovementDetailModal } from './MovementDetailModal';
+import { TableSkeleton } from '../common/TableSkeleton';
 
 export const getMovimientoTypeBadge = (mov: string, origen?: string, destino?: string) => {
   if (mov === '311' || (origen && destino && origen !== destino)) {
@@ -98,12 +99,13 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>VER</th>
             </tr>
           </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem' }}>Cargando movimientos e información desde la BD...</td></tr>
-            ) : flattenedRows.length === 0 ? (
-              <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem' }}>No se encontraron registros en esta vista con los filtros seleccionados.</td></tr>
-            ) : (
+          {loading ? (
+            <TableSkeleton rows={8} columns={12} />
+          ) : (
+            <tbody>
+              {flattenedRows.length === 0 ? (
+                <tr><td colSpan={12} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No se encontraron registros en esta vista con los filtros seleccionados.</td></tr>
+              ) : (
               flattenedRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(({ header, det, index: j }) => {
                 const rowKey = `${header.ID}-${j}`;
 
@@ -230,9 +232,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         </td>
                       </tr>
                     );
-                })
-            )}
-          </tbody>
+                  })
+                )}
+            </tbody>
+          )}
         </table>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: '1px solid var(--border-color)', background: 'white' }}>

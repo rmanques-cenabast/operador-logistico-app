@@ -48,25 +48,35 @@ export const useInventoryData = () => {
   const [adjustments, setAdjustments] = useState<AdjustmentHeader[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchAdjustments = (silent = false) => {
+  const fetchAdjustments = async (silent = false) => {
+    const startTime = Date.now();
     if (!silent) setLoading(true);
-    fetch(`${API_URL}/ol/inventory/adjustments?limit=1000`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'success' && data.data) {
-          setAdjustments(data.data.data || []);
+    try {
+      const res = await fetch(`${API_URL}/ol/inventory/adjustments?limit=1000`);
+      const data = await res.json();
+      if (data.status === 'success' && data.data) {
+        setAdjustments(data.data.data || []);
+      }
+      if (!silent) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 400) {
+          await new Promise(resolve => setTimeout(resolve, 400 - elapsed));
         }
-        if (!silent) setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error obteniendo ajustes:", err);
-        if (!silent) setLoading(false);
-      });
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Error obteniendo ajustes:", err);
+      if (!silent) setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchAdjustments();
-    const intervalId = setInterval(() => fetchAdjustments(true), 3000);
+    const intervalId = setInterval(() => {
+      if (!document.hidden) {
+        fetchAdjustments(true);
+      }
+    }, 20000);
     return () => clearInterval(intervalId);
   }, []);
 

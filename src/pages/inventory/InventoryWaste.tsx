@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Header from '../../components/Header';
 import { useInventoryData, AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { InventoryFilters } from '../../components/inventory/InventoryFilters';
@@ -66,7 +66,6 @@ const InventoryWaste: React.FC = () => {
 
   if (mermasFechaDesde) {
     const desde = new Date(mermasFechaDesde);
-    desde.setHours(0, 0, 0, 0);
     mermasConFecha = mermasConFecha.filter(m => new Date(m.fechaObj) >= desde);
   }
   if (mermasFechaHasta) {
@@ -75,70 +74,12 @@ const InventoryWaste: React.FC = () => {
     mermasConFecha = mermasConFecha.filter(m => new Date(m.fechaObj) <= hasta);
   }
 
-  const salidasStock = mermasConFecha.reduce((sum, d) => sum + Math.abs(d.Cantidad), 0);
-
-  const grouped = mermasConFecha.reduce((acc, curr) => {
-    const dateStr = curr.fechaObj.toISOString().split('T')[0];
-    acc[dateStr] = (acc[dateStr] || 0) + Math.abs(curr.Cantidad);
-    return acc;
-  }, {} as Record<string, number>);
-
-  let chartData = [];
-  if (mermasFechaDesde || mermasFechaHasta) {
-    let start = mermasFechaDesde ? new Date(mermasFechaDesde) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    let end = mermasFechaHasta ? new Date(mermasFechaHasta) : new Date();
-
-    if (isNaN(start.getTime())) start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    if (isNaN(end.getTime())) end = new Date();
-
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-
-    const diffDays = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-
-    for (let i = 0; i <= Math.min(diffDays, 180); i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      const qty = grouped[dateStr] || 0;
-      chartData.push({
-        name: d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
-        Unidades: qty
-      });
-    }
-  } else {
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      const qty = grouped[dateStr] || 0;
-      chartData.push({
-        name: d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
-        Unidades: qty
-      });
-    }
-  }
-
   return (
     <>
       <Header showSearch={false} />
       <main className="page-content">
         <h2 className="page-title">Mermas, Desguaces y Destrucción</h2>
         <p className="page-subtitle">Registro y auditoría de salidas por medicamentos destruidos, dañados o vencidos con Centro de Costos. (SAP 555)</p>
-
-        <div style={{ background: 'white', padding: '24px', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-main)' }}>Evolución de Destrucción y Desguaces (SAP 555)</h3>
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Tendencia temporal de medicamentos descontados del inventario por bajas o daño.</p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--danger-main)', lineHeight: 1 }}>{salidasStock.toLocaleString()} Un.</span>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Pérdida Total</div>
-            </div>
-          </div>
-
-          </div>
 
         <InventoryFilters 
           activeTab="mermas"
