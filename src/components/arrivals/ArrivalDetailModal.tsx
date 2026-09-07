@@ -176,7 +176,7 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
         {/* Header */}
         <div className="panel-header" style={{ padding: '18px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', fontSize: '1.05rem', color: '#0f172a', background: '#f8fafc' }}>
           <div className="flex items-center gap-3">
-            <span className="font-mono">Detalle PRE AVISO - {headerInfo?.id?.replace('PRE-', '')}</span>
+            <span className="font-mono">Detalle RECEPCIÓN - {headerInfo?.id?.replace('PRE-', '')}</span>
             <span className="text-xs font-mono font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded border border-blue-200">
               PC: {headerInfo?.poNumber}
             </span>

@@ -9,7 +9,8 @@ interface ArrivalsTableProps {
   onOpenDetail: (rowId: string) => void;
   currentPage: number;
   onPageChange: (page: number) => void;
-  itemsPerPage?: number;
+  totalPages?: number;
+  totalItems?: number;
 }
 
 export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
@@ -18,11 +19,10 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
   onOpenDetail,
   currentPage,
   onPageChange,
-  itemsPerPage = 10
+  totalPages = 1,
+  totalItems
 }) => {
-  const totalPages = Math.max(1, Math.ceil(orders.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentOrders = orders.slice(startIndex, startIndex + itemsPerPage);
+  const currentOrders = orders;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col w-full">
@@ -124,7 +124,7 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
       </div>
 
       <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50 text-xs text-slate-500">
-        <span>Mostrando {orders.length} registros filtrados</span>
+        <span>Mostrando {orders.length} de {totalItems ?? orders.length} registros (Página {currentPage} de {Math.max(1, totalPages)})</span>
         <div className="flex items-center gap-1">
           <button 
             disabled={currentPage <= 1 || isLoading}

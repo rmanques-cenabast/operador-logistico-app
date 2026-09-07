@@ -4,74 +4,75 @@ import { useAuth } from '../contexts/AuthContext';
 import { ArrivalOrder, ArrivalDetailModal } from '../components/arrivals/ArrivalDetailModal';
 import { ArrivalsFilters } from '../components/arrivals/ArrivalsFilters';
 import { ArrivalsTable } from '../components/arrivals/ArrivalsTable';
-import { ArrivalsService } from '../services/arrivals.service';
+import { ArrivalsService, PaginatedReceivedOrders } from '../services/arrivals.service';
 import { usePolling } from '../hooks/usePolling';
+import { useDebounce } from '../hooks/useDebounce';
 
 const Arrivals: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('TODOS');
   const [filterProvider, setFilterProvider] = useState('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 350);
   
   const { user } = useAuth();
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [documentsMap, setDocumentsMap] = useState<Record<string, any[]>>({});
+  const [dbProviders, setDbProviders] = useState<string[]>([]);
 
   const lineaNegocio = user?.role === 'intermediacion' ? 'INT' : 'FP';
   const lineaNegocioLabel = user?.role === 'intermediacion' ? 'INTERMEDIACIÓN' : 'FARMACIAS PRIVADAS';
 
-  // Usar usePolling con caché en memoria SWR
-  const { data: rawOrders, isLoading } = usePolling<ArrivalOrder[]>({
-    fetcher: () => ArrivalsService.getReceivedOrders(lineaNegocio),
-    initialData: ArrivalsService.getCachedReceivedOrders(lineaNegocio),
+  // Cargar lista de proveedores desde la base de datos
+  useEffect(() => {
+    ArrivalsService.getProviders(lineaNegocio).then(list => {
+      setDbProviders(list);
+    });
+  }, [lineaNegocio]);
+
+  // Resetear a página 1 cuando cambian filtros o búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, filterProvider, filterStatus]);
+
+  // Usar usePolling con paginación y búsqueda en servidor
+  const { data: responseData, isLoading } = usePolling<PaginatedReceivedOrders>({
+    fetcher: () => ArrivalsService.getReceivedOrders({
+      lineaNegocio,
+      page: currentPage,
+      limit: 25,
+      search: debouncedSearchTerm,
+      provider: filterProvider,
+      status: filterStatus
+    }),
+    initialData: null,
     intervalMs: 20000,
-    dependencies: [lineaNegocio]
+    dependencies: [lineaNegocio, currentPage, debouncedSearchTerm, filterProvider, filterStatus]
   });
 
-  const orders: ArrivalOrder[] = rawOrders || [];
+  const orders: ArrivalOrder[] = responseData?.orders || [];
+  const pagination = responseData?.pagination || { page: 1, limit: 25, totalItems: 0, totalPages: 1 };
 
   const uniqueProviders = useMemo(() => {
+    if (dbProviders.length > 0) return dbProviders;
     return Array.from(new Set(orders.map(o => o.provider)));
-  }, [orders]);
+  }, [dbProviders, orders]);
 
-  const processedOrders = useMemo(() => {
-    return orders.filter(line => {
-      if (filterProvider !== 'TODOS' && line.provider !== filterProvider) return false;
-      if (filterStatus !== 'TODOS') {
-        if (filterStatus === 'CON DIFERENCIAS') {
-          if (line.status !== 'FALTANTE' && line.status !== 'SOBRANTE') return false;
-        } else if (line.status !== filterStatus) {
-          return false;
-        }
-      }
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        return (
-          line.id.toLowerCase().includes(term) ||
-          line.poNumber.toLowerCase().includes(term) ||
-          line.provider.toLowerCase().includes(term) ||
-          line.productCode.toLowerCase().includes(term) ||
-          line.batch.toLowerCase().includes(term)
-        );
-      }
-      return true;
-    });
-  }, [orders, filterProvider, filterStatus, searchTerm]);
-
-  // Cargar documentos al abrir modal
+  // Cargar documentos al abrir modal sin depender de orders para no disparar llamadas en cada polling
   useEffect(() => {
     if (isPanelOpen && selectedRowId) {
-      const selectedLines = orders.filter(o => o.id === selectedRowId || o.rowId === selectedRowId);
-      selectedLines.forEach(async (line) => {
-        const docs = await ArrivalsService.getDocuments(line.poNumber, line.id);
-        const key = `${line.poNumber}-${line.id}`;
-        setDocumentsMap(prev => ({ ...prev, [key]: docs }));
-      });
+      const target = orders.find(o => o.id === selectedRowId || o.rowId === selectedRowId);
+      if (target) {
+        ArrivalsService.getDocuments(target.poNumber, target.id).then(docs => {
+          const key = `${target.poNumber}-${target.id}`;
+          setDocumentsMap(prev => ({ ...prev, [key]: docs }));
+        });
+      }
     }
-  }, [isPanelOpen, selectedRowId, orders]);
+  }, [isPanelOpen, selectedRowId]);
 
-  const totalRecepciones = useMemo(() => Array.from(new Set(orders.map(o => o.id))).length, [orders]);
+  const totalRecepciones = pagination.totalItems;
   const totalDiscrepancias = useMemo(() => Array.from(new Set(
     orders.filter(l => l.status === 'FALTANTE' || l.status === 'SOBRANTE').map(o => o.id)
   )).length, [orders]);
@@ -88,8 +89,15 @@ const Arrivals: React.FC = () => {
       if (data.status === 'error') {
         return { success: false, message: data.message || 'Error al procesar la liberación' };
       }
-      // Refrescar las órdenes para reflejar el nuevo estado 'PENDIENTE'
-      await ArrivalsService.getReceivedOrders(lineaNegocio);
+      // Refrescar las órdenes para reflejar el nuevo estado
+      await ArrivalsService.getReceivedOrders({
+        lineaNegocio,
+        page: currentPage,
+        limit: 25,
+        search: debouncedSearchTerm,
+        provider: filterProvider,
+        status: filterStatus
+      });
       return { 
         success: true, 
         message: data.message || `Se ha autorizado la liberación a SAP para el preaviso ${numeroPreAviso}.` 
@@ -98,7 +106,6 @@ const Arrivals: React.FC = () => {
       return { success: false, message: e?.message || 'Error de conexión al liberar' };
     }
   };
-
 
   return (
     <>
@@ -154,11 +161,13 @@ const Arrivals: React.FC = () => {
 
           {/* Tabla */}
           <ArrivalsTable 
-            orders={processedOrders}
+            orders={orders}
             isLoading={isLoading && orders.length === 0}
             onOpenDetail={handleOpenDetail}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
           />
         </main>
 

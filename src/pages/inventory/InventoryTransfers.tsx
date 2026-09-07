@@ -6,14 +6,14 @@ import { InventoryTable } from '../../components/inventory/InventoryTable';
 import { Hexagon, RefreshCcw, CheckCircle2, AlertCircle, XCircle, } from 'lucide-react';
 
 const InventoryTransfers: React.FC = () => {
-  const { adjustments, loading, fetchAdjustments } = useInventoryData();
+  const { adjustments, loading, fetchAdjustments } = useInventoryData('TRASPASOS', 25);
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedTipoMov, setSelectedTipoMov] = useState<string>('TODOS');
   const [selectedTipoStock, setSelectedTipoStock] = useState<string>('TODOS');
   const [selectedAjuste, setSelectedAjuste] = useState<{ header: AdjustmentHeader, detalle: AdjustmentDetail } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   
   const filteredAdjustments = useMemo(() => {
     return adjustments.filter(header => {
