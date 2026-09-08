@@ -118,6 +118,8 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
       const res: any = await ArrivalsService.adjuntarDocumentoASap(doc.id);
       if (res && res.status === 'success') {
         setAttachedDocs(prev => new Set(prev).add(doc.id));
+        doc.estadoSAP = 'PROCESADO';
+        doc.documentoMaterialSAP = headerInfo.documentoSAP;
         setReleaseStatusModal({
           type: 'success',
           title: '¡Anexo Vinculado con Éxito en SAP!',
@@ -518,7 +520,9 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0f172a' }}>{doc.nombreArchivo}</div>
                         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          Tipo: <strong>{doc.tipoDocumento || 'ADJUNTO'}</strong> | Subido el: {(() => {
+                          Tipo: <strong>{doc.tipoDocumento || 'ADJUNTO'}</strong>
+                          {doc.numeroFactura && <> | Factura: <strong style={{ color: '#1e293b' }}>#{doc.numeroFactura}</strong></>}
+                          {' '}| Subido el: {(() => {
                             if (!doc.fechaSubida) return '-';
                             const d = new Date(doc.fechaSubida);
                             const fechaStr = d.toLocaleDateString('es-CL', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -530,10 +534,10 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {/* Botón Adjuntar a SAP */}
-                      {attachedDocs.has(doc.id) ? (
+                      {(attachedDocs.has(doc.id) || doc.estadoSAP === 'PROCESADO' || doc.estadoSap === 'PROCESADO') ? (
                         <span 
                           style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}
-                          title="Archivo vinculado en SAP GOS exitosamente"
+                          title={`Archivo vinculado en SAP GOS exitosamente${doc.documentoMaterialSAP ? ` (MIGO: ${doc.documentoMaterialSAP})` : ''}`}
                         >
                           <CheckCircle size={15} /> Adjunto en SAP
                         </span>
