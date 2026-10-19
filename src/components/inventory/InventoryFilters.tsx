@@ -46,7 +46,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Buscar Folio, ZCEN, Lote, Doc. SAP..."
+          placeholder="BUSCAR FOLIO, ZCEN, LOTE, DOC. SAP..."
           style={{ width: '100%', padding: '8px 12px 8px 36px', border: '1px solid var(--border-color)', background: 'var(--app-bg)', borderRadius: '6px', fontSize: '0.85rem', outline: 'none', transition: 'all 0.2s' }}
           onFocus={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = 'var(--primary-main)'; }}
           onBlur={(e) => { e.currentTarget.style.background = 'var(--app-bg)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
@@ -64,13 +64,13 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
               className="filter-select"
               style={{ padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--app-bg)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer' }}
             >
-              <option value="TODOS">Todas las Operaciones</option>
-              <option value="311">Traspasos (311)</option>
-              <option value="555">Mermas / Desguace (555)</option>
-              <option value="711">Faltante Conteo (711)</option>
-              <option value="712">Sobrante Conteo (712)</option>
-              <option value="331">Muestreo ISP (331)</option>
-              <option value="511">Entrada Sin OC (511)</option>
+              <option value="TODOS">TODAS LAS OPERACIONES</option>
+              <option value="311">TRASPASOS (311)</option>
+              <option value="555">MERMAS / DESGUACE (555)</option>
+              <option value="711">FALTANTE CONTEO (711)</option>
+              <option value="712">SOBRANTE CONTEO (712)</option>
+              <option value="331">MUESTREO ISP (331)</option>
+              <option value="511">ENTRADA SIN OC (511)</option>
             </select>
           </div>
         )}
@@ -85,10 +85,10 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
               onClick={() => { setMermasFechaDesde(inputFechaDesde); setMermasFechaHasta(inputFechaHasta); }}
               style={{ background: 'var(--primary-main)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
             >
-              Filtrar
+              FILTRAR
             </button>
             {(mermasFechaDesde || mermasFechaHasta || inputFechaDesde || inputFechaHasta) && (
-              <button onClick={() => { setInputFechaDesde(''); setInputFechaHasta(''); setMermasFechaDesde(''); setMermasFechaHasta(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: '0 4px' }}>Limpiar</button>
+              <button onClick={() => { setInputFechaDesde(''); setInputFechaHasta(''); setMermasFechaDesde(''); setMermasFechaHasta(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: '0 4px' }}>LIMPIAR</button>
             )}
           </div>
         )}
@@ -101,10 +101,10 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
             className="filter-select"
             style={{ padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--app-bg)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer' }}
           >
-            <option value="TODOS">Todos</option>
-            <option value="L.UTILIZACION">Libre Utilización</option>
-            <option value="C.CALIDAD">Control Calidad</option>
-            <option value="BLOQUEADO">Bloqueado</option>
+            <option value="TODOS">TODOS</option>
+            <option value="L.UTILIZACION">LIBRE UTILIZACIÓN</option>
+            <option value="C.CALIDAD">CONTROL CALIDAD</option>
+            <option value="BLOQUEADO">BLOQUEADO</option>
           </select>
         </div>
 
@@ -112,10 +112,10 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
         <button
           onClick={() => fetchAdjustments(false)}
           className="btn"
-          title="Recargar datos"
-          style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-main)' }}
+          title="RECARGAR DATOS"
+          style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}
         >
-          <RefreshCw size={14} /> Refrescar
+          <RefreshCw size={14} /> REFRESCAR
         </button>
       </div>
     </div>

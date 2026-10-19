@@ -81,182 +81,237 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
 
   return (
     <>
-      <div className="data-table-container" style={{ width: '100%', background: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>FECHA</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>OPERACIÓN SAP</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>ESTADO SAP</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>REF. SAP</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>C.MATERIAL</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>LOTE SAP</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>ORIGEN</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>DESTINO</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>STOCK ORIGEN</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>STOCK DESTINO</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>CANTIDAD</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>VER</th>
-            </tr>
-          </thead>
-          {loading ? (
-            <TableSkeleton rows={8} columns={12} />
-          ) : (
-            <tbody>
-              {flattenedRows.length === 0 ? (
-                <tr><td colSpan={12} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No se encontraron registros en esta vista con los filtros seleccionados.</td></tr>
-              ) : (
-              flattenedRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(({ header, det, index: j }) => {
-                const rowKey = `${header.ID}-${j}`;
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
+                <th className="py-3.5 px-4 text-left whitespace-nowrap">FECHA</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">OPERACIÓN SAP</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">ESTADO SAP</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">REF. SAP</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">C. MATERIAL</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">LOTE SAP</th>
+                <th className="py-3.5 px-2 text-center whitespace-nowrap">ORIGEN</th>
+                <th className="py-3.5 px-2 text-center whitespace-nowrap">DESTINO</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">STOCK ORIGEN</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">STOCK DESTINO</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">CANTIDAD</th>
+                <th className="py-3.5 px-2 text-center whitespace-nowrap">ACCIÓN</th>
+              </tr>
+            </thead>
+            {loading ? (
+              <TableSkeleton rows={8} columns={12} />
+            ) : (
+              <tbody className="divide-y divide-slate-200">
+                {flattenedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="py-12 text-center text-slate-400 text-sm font-semibold uppercase">
+                      NO SE ENCONTRARON REGISTROS EN ESTA VISTA CON LOS FILTROS SELECCIONADOS.
+                    </td>
+                  </tr>
+                ) : (
+                  flattenedRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(({ header, det, index: j }) => {
+                    const rowKey = `${header.ID}-${j}`;
 
-                    let estadoSapBadge = { label: 'Pendiente', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
+                    let estadoSapBadge = { label: 'PENDIENTE', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
                     const estadoUpper = (header.Estado_SAP || '').toUpperCase();
                     if (estadoUpper === 'PROCESADO' || estadoUpper === 'EXITOSO' || estadoUpper === 'COMPLETADO') {
-                      estadoSapBadge = { label: 'Sincronizado', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
+                      estadoSapBadge = { label: 'SINCRONIZADO', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
                     } else if (estadoUpper === 'RECHAZADO') {
-                      estadoSapBadge = { label: 'Supervisión', bg: '#ffedd5', color: '#c2410c', border: '#fed7aa' };
+                      estadoSapBadge = { label: 'SUPERVISIÓN', bg: '#ffedd5', color: '#c2410c', border: '#fed7aa' };
                     } else if (estadoUpper.includes('ERROR') || estadoUpper.includes('FALLO')) {
-                      estadoSapBadge = { label: 'Fallo SAP', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
+                      estadoSapBadge = { label: 'FALLO SAP', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' };
                     }
 
                     const movBadge = getMovimientoTypeBadge(det.Tipo_Movimiento, det.Almacen_Origen, det.Almacen_Destino);
 
+                    const fechaRaw = header.Fecha_Creacion ? String(header.Fecha_Creacion).replace('Z', '') : '';
+                    const d = fechaRaw ? new Date(fechaRaw) : null;
+                    const fechaFmt = d && !isNaN(d.getTime()) 
+                      ? `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
+                      : '-';
+                    const horaFmt = d && !isNaN(d.getTime())
+                      ? d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })
+                      : '';
+
+                    const esEgreso = ['711', '717', '551', '553', '555', '331', '333'].includes(det.Tipo_Movimiento);
+                    const cantidadReal = esEgreso ? -Math.abs(det.Cantidad) : det.Cantidad;
+
                     return (
                       <tr
                         key={rowKey}
-                        style={{ cursor: 'pointer', transition: 'background 0.2s' }}
-                        onMouseOver={e => e.currentTarget.style.background = 'var(--app-bg)'}
-                        onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                        onClick={() => { setSelectedAjuste({ header, detalle: det }); }}
+                        className="hover:bg-slate-50/80 transition-colors"
                       >
-                        <td style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.8rem' }}>
-                              {(() => {
-                                const d = new Date(String(header.Fecha_Creacion).replace('Z', ''));
-                                return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-                              })()}
-                            </span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(String(header.Fecha_Creacion).replace('Z', '')).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                        {/* FECHA */}
+                        <td className="py-4 px-4 text-left whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 font-mono text-xs">
+                            <span className="font-semibold text-slate-800">{fechaFmt}</span>
+                            <span className="text-slate-400">{horaFmt}</span>
                           </div>
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', background: movBadge.bg, color: movBadge.color, border: `1px solid ${movBadge.border}`, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+
+                        {/* OPERACIÓN SAP */}
+                        <td className="py-4 px-3 text-center whitespace-nowrap">
+                          <span 
+                            className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase"
+                            style={{ background: movBadge.bg, color: movBadge.color, border: `1px solid ${movBadge.border}` }}
+                          >
                             {movBadge.label}
                           </span>
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', background: estadoSapBadge.bg, color: estadoSapBadge.color, border: `1px solid ${estadoSapBadge.border}` }}>
+
+                        {/* ESTADO SAP */}
+                        <td className="py-4 px-3 text-center whitespace-nowrap">
+                          <span 
+                            className="inline-block px-2.5 py-0.5 rounded text-xs font-semibold tracking-wide uppercase"
+                            style={{ background: estadoSapBadge.bg, color: estadoSapBadge.color, border: `1px solid ${estadoSapBadge.border}` }}
+                          >
                             {estadoSapBadge.label}
                           </span>
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'left' }}>
+
+                        {/* REF. SAP */}
+                        <td className="py-4 px-3 text-center whitespace-nowrap">
                           {header.Documento_SAP_Ref ? (
-                            <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary-main)', background: 'var(--app-bg)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                            <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200 text-xs inline-block">
                               {header.Documento_SAP_Ref}
                             </span>
                           ) : (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pendiente</span>
+                            <span className="text-xs text-slate-400 font-mono uppercase">PENDIENTE</span>
                           )}
                         </td>
 
-                        {/* CÓDIGO MATERIAL (ZCEN) INDEPENDIENTE */}
-                        <td style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--text-main)' }}>
+                        {/* CÓDIGO MATERIAL */}
+                        <td className="py-4 px-3 text-center font-mono font-bold text-slate-800 text-sm whitespace-nowrap">
                           {det.Codigo_Material}
                         </td>
 
-                        {/* LOTE SAP INDEPENDIENTE */}
-                        <td style={{ padding: '12px 16px', textAlign: 'left' }}>
-                          <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-secondary)', background: '#f8fafc', padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                            {det.Lote_SAP || 'N/A'}
+                        {/* LOTE SAP */}
+                        <td className="py-4 px-3 text-center font-mono font-semibold text-slate-700 text-sm uppercase whitespace-nowrap">
+                          {det.Lote_SAP || 'N/A'}
+                        </td>
+
+                        {/* ALMACÉN ORIGEN */}
+                        <td className="py-4 px-2 text-center whitespace-nowrap" style={{ position: 'relative' }}>
+                          {det.Almacen_Origen ? (
+                            <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">
+                              {det.Almacen_Origen}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                          {det.Almacen_Origen && det.Almacen_Destino && (
+                            <ArrowRight
+                              className="transfer-arrow"
+                              size={14}
+                              style={{
+                                color: 'var(--primary-main)',
+                                position: 'absolute',
+                                right: '-7px',
+                                top: '50%',
+                                marginTop: '-7px',
+                                zIndex: 10
+                              }}
+                            />
+                          )}
+                        </td>
+
+                        {/* ALMACÉN DESTINO */}
+                        <td className="py-4 px-2 text-center whitespace-nowrap">
+                          {det.Almacen_Destino ? (
+                            <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">
+                              {det.Almacen_Destino}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        {/* STOCK ORIGEN */}
+                        <td className="py-4 px-3 text-center whitespace-nowrap" style={{ position: 'relative' }}>
+                          {((det as any).StockOrigen || (det as any).stockorigen) ? (
+                            renderStockBadge((det as any).StockOrigen || (det as any).stockorigen)
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                          {((det as any).StockOrigen || (det as any).stockorigen) && ((det as any).StockDestino || (det as any).stockdestino) && (
+                            <ArrowRight
+                              className="transfer-arrow"
+                              size={14}
+                              style={{
+                                color: 'var(--primary-main)',
+                                position: 'absolute',
+                                right: '-7px',
+                                top: '50%',
+                                marginTop: '-7px',
+                                zIndex: 10
+                              }}
+                            />
+                          )}
+                        </td>
+
+                        {/* STOCK DESTINO */}
+                        <td className="py-4 px-3 text-center whitespace-nowrap">
+                          {((det as any).StockDestino || (det as any).stockdestino) ? (
+                            renderStockBadge((det as any).StockDestino || (det as any).stockdestino)
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        {/* CANTIDAD */}
+                        <td className="py-4 px-3 text-center font-mono text-sm font-bold whitespace-nowrap">
+                          <span className={cantidadReal > 0 ? 'text-emerald-600' : (cantidadReal < 0 ? 'text-rose-600' : 'text-slate-700')}>
+                            {cantidadReal > 0 ? `+${cantidadReal}` : cantidadReal} UN.
                           </span>
                         </td>
 
-                        {/* ALMACÉN ORIGEN Y DESTINO SEPARADOS */}
-                        <td style={{ padding: '12px 16px', textAlign: 'center', position: 'relative' }}>
-                          {det.Almacen_Origen ? (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', fontFamily: 'monospace' }}>{det.Almacen_Origen}</span>
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
-                          {det.Almacen_Origen && det.Almacen_Destino && (
-                            <ArrowRight className="transfer-arrow" size={14} style={{ color: 'var(--primary-main)', position: 'absolute', right: '-7px', top: '50%', marginTop: '-7px', zIndex: 10 }} />
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          {det.Almacen_Destino ? (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', fontFamily: 'monospace' }}>{det.Almacen_Destino}</span>
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
-                        </td>
-
-                        <td style={{ padding: '12px 16px', textAlign: 'center', position: 'relative' }}>
-                          {((det as any).StockOrigen || (det as any).stockorigen) ?
-                            renderStockBadge((det as any).StockOrigen || (det as any).stockorigen) :
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          }
-
-                          {((det as any).StockOrigen || (det as any).stockorigen) && ((det as any).StockDestino || (det as any).stockdestino) && (
-                            <ArrowRight className="transfer-arrow" size={14} style={{ color: 'var(--primary-main)', position: 'absolute', right: '-7px', top: '50%', marginTop: '-7px', zIndex: 10 }} />
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          {((det as any).StockDestino || (det as any).stockdestino) ?
-                            renderStockBadge((det as any).StockDestino || (det as any).stockdestino) :
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          }
-                        </td>
-
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          {(() => {
-                            const esEgreso = ['711', '717', '551', '553', '555', '331', '333'].includes(det.Tipo_Movimiento);
-                            const cantidadReal = esEgreso ? -Math.abs(det.Cantidad) : det.Cantidad;
-                            return (
-                              <span style={{
-                                fontWeight: 600,
-                                color: cantidadReal > 0 ? 'var(--success-text)' : (cantidadReal < 0 ? 'var(--danger-text)' : 'inherit')
-                              }}>
-                                {cantidadReal > 0 ? '+' + cantidadReal : cantidadReal} Un.
-                              </span>
-                            );
-                          })()}
-                        </td>
-
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <Eye size={16} style={{ color: 'var(--text-muted)' }} />
+                        {/* ACCIÓN (ÚNICO DISPARADOR DEL MODAL) */}
+                        <td className="py-4 px-2 text-center whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedAjuste({ header, detalle: det });
+                            }}
+                            title="VER DETALLE DE MOVIMIENTO"
+                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
+                          >
+                            <Eye size={18} />
+                          </button>
                         </td>
                       </tr>
                     );
                   })
                 )}
-            </tbody>
-          )}
-        </table>
+              </tbody>
+            )}
+          </table>
+        </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: '1px solid var(--border-color)', background: 'white' }}>
-          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            Mostrando resultados {flattenedRows.length === 0 ? 0 : Math.min((currentPage - 1) * itemsPerPage + 1, flattenedRows.length)} al {Math.min(currentPage * itemsPerPage, flattenedRows.length)} de un total de {flattenedRows.length} movimientos
+        {/* Paginación con estilo homologado en mayúsculas */}
+        <div className="flex flex-col sm:flex-row justify-between items-center px-5 py-3.5 border-t border-slate-200 bg-white gap-3 font-mono text-xs uppercase">
+          <div className="text-slate-500">
+            MOSTRANDO RESULTADOS {flattenedRows.length === 0 ? 0 : Math.min((currentPage - 1) * itemsPerPage + 1, flattenedRows.length)} AL {Math.min(currentPage * itemsPerPage, flattenedRows.length)} DE UN TOTAL DE {flattenedRows.length} MOVIMIENTOS
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === 1 ? '#f8fafc' : 'white', color: currentPage === 1 ? '#94a3b8' : 'var(--text-main)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              title="PÁGINA ANTERIOR"
             >
               <ChevronLeft size={16} />
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-main)' }}>
-              Página {currentPage} de {Math.max(1, Math.ceil(flattenedRows.length / itemsPerPage))}
+            <div className="px-3 py-1 font-semibold text-slate-700">
+              PÁGINA {currentPage} DE {Math.max(1, Math.ceil(flattenedRows.length / itemsPerPage))}
             </div>
             <button
               onClick={() => setCurrentPage(p => Math.min(Math.ceil(flattenedRows.length / itemsPerPage), p + 1))}
               disabled={currentPage >= Math.ceil(flattenedRows.length / itemsPerPage)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage >= Math.ceil(flattenedRows.length / itemsPerPage) ? '#f8fafc' : 'white', color: currentPage >= Math.ceil(flattenedRows.length / itemsPerPage) ? '#94a3b8' : 'var(--text-main)', cursor: currentPage >= Math.ceil(flattenedRows.length / itemsPerPage) ? 'not-allowed' : 'pointer' }}
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              title="PÁGINA SIGUIENTE"
             >
               <ChevronRight size={16} />
             </button>

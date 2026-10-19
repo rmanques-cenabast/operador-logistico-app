@@ -33,11 +33,11 @@ const PageLoader = () => (
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/operador-logistico-app">
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />
-            
+
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Layout />}>
                 <Route index element={<Navigate to="/inventario" replace />} />

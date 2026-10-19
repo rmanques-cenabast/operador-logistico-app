@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { API_URL } from '../config/api';
+import { VISOR_API_URL, getApiHeaders } from '../config/api';
 
 export interface SapLog {
   IdLog: number;
@@ -52,13 +52,15 @@ export const useInventoryData = (modulo?: string, limit: number = 25) => {
     const startTime = Date.now();
     if (!silent) setLoading(true);
     try {
-      const url = new URL(`${API_URL}/ol/inventory/adjustments`);
+      const url = new URL(`${VISOR_API_URL}/inventory/adjustments`);
       url.searchParams.set('limit', String(limit));
       if (modulo) {
         url.searchParams.set('modulo', modulo);
       }
 
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), {
+        headers: getApiHeaders()
+      });
       const data = await res.json();
       if (data.status === 'success' && data.data) {
         setAdjustments(data.data.data || []);

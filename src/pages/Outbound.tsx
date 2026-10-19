@@ -1,169 +1,249 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '../components/Header';
-import { Maximize2, CheckCircle } from 'lucide-react';
-
-interface OutboundOrder {
-  id: string;
-  recipient: string;
-  location: string;
-  carrier: string;
-  items: number;
-  status: string;
-  badge: string;
-}
-
-const outboundOrders: OutboundOrder[] = [
-  { id: 'SHP-9021', recipient: 'Global Retail Corp', location: 'Chicago Hub #2', carrier: 'FedEx Express', items: 14, status: 'EMPACADO', badge: 'warning' },
-  { id: 'SHP-8842', recipient: 'TechVantage Solutions', location: 'Austin Annex', carrier: 'DHL Global', items: 3, status: 'PICKING', badge: 'info' },
-  { id: 'SHP-9110', recipient: 'Prime Logistics', location: 'Main Dock B', carrier: 'UPS Freight', items: 22, status: 'ENVIADO', badge: 'success' },
-  { id: 'SHP-7721', recipient: 'Blue Star Retail', location: 'North Warehouse', carrier: 'Internal Fleet', items: 8, status: 'BORRADOR', badge: 'draft' },
-  { id: 'SHP-9083', recipient: 'Zenco Manufacturing', location: 'Detroit Plant', carrier: 'Old Dominion', items: 41, status: 'RETENIDO', badge: 'danger' },
-];
+import { Truck, Clock, CheckCircle2, AlertTriangle, Boxes, CheckCircle } from 'lucide-react';
+import { OutboundService, OutboundDelivery, OutboundMetrics } from '../services/outbound.service';
+import { OutboundFilters } from '../components/outbound/OutboundFilters';
+import { OutboundTable } from '../components/outbound/OutboundTable';
+import { PickingDetailModal } from '../components/outbound/PickingDetailModal';
 
 const Outbound: React.FC = () => {
+  const [deliveries, setDeliveries] = useState<OutboundDelivery[]>([]);
+  const [metrics, setMetrics] = useState<OutboundMetrics>({
+    PendientesPicking: 0,
+    EnPicking: 0,
+    PickingConfirmado: 0,
+    DespachadosTotal: 0,
+    Urgentes: 0
+  });
+  const [loading, setLoading] = useState<boolean>(true);
+  const [syncing, setSyncing] = useState<boolean>(false);
+  const [syncBanner, setSyncBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('TODOS');
+  const [fechaDesde, setFechaDesde] = useState<string>('2026-01-01');
+  const [fechaHasta, setFechaHasta] = useState<string>('2026-07-31');
+  const [selectedDelivery, setSelectedDelivery] = useState<OutboundDelivery | null>(null);
+
+  // ESTADOS DE PAGINACIÓN (10 O 15 POR PÁGINA)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(15);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [deliveriesRes, metricsRes] = await Promise.all([
+        OutboundService.getDeliveries({
+          status: statusFilter,
+          search: searchTerm,
+          page: currentPage,
+          limit: itemsPerPage
+        }),
+        OutboundService.getMetrics()
+      ]);
+
+      if (deliveriesRes.status === 'success' && Array.isArray(deliveriesRes.data)) {
+        setDeliveries(deliveriesRes.data);
+        const count = deliveriesRes.totalItems ?? (deliveriesRes.data[0]?.TotalRegistros ?? deliveriesRes.data.length);
+        setTotalItems(count);
+        setTotalPages(deliveriesRes.totalPages ?? Math.max(1, Math.ceil(count / itemsPerPage)));
+      }
+      if (metricsRes) {
+        setMetrics(metricsRes);
+      }
+    } catch (err) {
+      console.error('Error fetching outbound data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, searchTerm, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSyncSap = async () => {
+    setSyncing(true);
+    setSyncBanner(null);
+    try {
+      // Sincroniza desde el rango configurado (por defecto desde Enero hasta Julio 2026 para SAP DEV)
+      const res = await OutboundService.syncFromSap(fechaDesde, fechaHasta);
+      setSyncBanner({
+        type: 'success',
+        message: `Sincronización SAP exitosa: ${res.nuevas} entregas nuevas incorporadas y ${res.existentes} verificadas (período: ${res.fechaDesde} al ${res.fechaHasta}).`
+      });
+      await fetchData();
+    } catch (err: any) {
+      setSyncBanner({
+        type: 'error',
+        message: err.message || 'Error al conectar con la API de SAP para sincronizar entregas.'
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <>
-      <Header searchPlaceholder="Buscar ID de envío, SKU o transportista..." />
-      <div className="split-page">
-        <main className="main-column">
-          <h2 className="page-title">Envíos de Salida</h2>
-          <p className="page-subtitle">Órdenes de despacho activas para hoy.</p>
-
-          <div className="metrics-grid" style={{gridTemplateColumns: 'repeat(3, 1fr)'}}>
-            <div className="metric-card">
-              <div className="metric-title">PENDIENTE DE PICKING</div>
-              <div className="metric-value">12</div>
-              <div className="metric-trend" style={{color: 'var(--info-text)'}}>⏱ 8 urgentes</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-title">ETAPA DE EMPAQUE</div>
-              <div className="metric-value">05</div>
-              <div className="metric-trend" style={{color: 'var(--text-muted)'}}>☑ Listo para QC</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-title">DESPACHADOS (HOY)</div>
-              <div className="metric-value">84</div>
-              <div className="metric-trend trend-down">↗ +12% vs ayer</div>
+      <Header showSearch={false} />
+      <div className="flex flex-col min-h-[calc(100vh-64px)] bg-slate-50 w-full">
+        <main className="px-8 py-6 w-full flex-1">
+          {/* TÍTULO */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 uppercase">
+                SALIDAS Y PICKEO EN BODEGA (OUTBOUND)
+              </h2>
+              <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">
+                GESTIÓN DE ENTREGAS DE SALIDA SAP (VL01N), PICKING FÍSICO Y GUÍAS DE DESPACHO DTE 52
+              </p>
             </div>
           </div>
 
-          <div className="data-table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>RECIPIENTE</th>
-                  <th>TRANSPORTISTA</th>
-                  <th>ARTÍCULOS</th>
-                  <th>ESTADO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {outboundOrders.map((item, i) => (
-                  <tr key={i}>
-                    <td style={{fontWeight: 600}}>{item.id}</td>
-                    <td>
-                      <div className="sku-info">
-                        <span className="sku-code">{item.recipient}</span>
-                        <span className="sku-desc">{item.location}</span>
-                      </div>
-                    </td>
-                    <td>{item.carrier}</td>
-                    <td>{item.items < 10 ? `0${item.items}` : item.items}</td>
-                    <td><span className={`badge ${item.badge}`}>{item.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* BANNER DE SINCRONIZACIÓN SAP */}
+          {syncBanner && (
+            <div className={`p-4 rounded-xl mb-6 flex items-center justify-between text-xs font-medium border ${
+              syncBanner.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}>
+              <div className="flex items-center gap-2">
+                {syncBanner.type === 'success' ? (
+                  <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle size={16} className="text-rose-600 shrink-0" />
+                )}
+                <span>{syncBanner.message}</span>
+              </div>
+              <button
+                onClick={() => setSyncBanner(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold ml-4"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* MÉTRICAS SUPERIORES */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* PENDIENTES DE PICKING */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  PENDIENTES DE PICKING
+                </span>
+                <div className="text-2xl font-bold text-slate-800 font-mono mt-1">
+                  {metrics.PendientesPicking < 10 ? `0${metrics.PendientesPicking}` : metrics.PendientesPicking}
+                </div>
+                <span className="text-[10px] text-amber-600 font-semibold uppercase mt-1 block">
+                  POR INICIAR PICKING
+                </span>
+              </div>
+              <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                <Clock size={22} />
+              </div>
+            </div>
+
+            {/* EN PICKING */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  EN PICKING (PREPARACIÓN)
+                </span>
+                <div className="text-2xl font-bold text-slate-800 font-mono mt-1">
+                  {metrics.EnPicking < 10 ? `0${metrics.EnPicking}` : metrics.EnPicking}
+                </div>
+                <span className="text-[10px] text-sky-600 font-semibold uppercase mt-1 block">
+                  EN ESTANTERÍA
+                </span>
+              </div>
+              <div className="p-3 bg-sky-50 text-sky-600 rounded-xl">
+                <Boxes size={22} />
+              </div>
+            </div>
+
+            {/* PICKING CONFIRMADO (LISTO DTE) */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  PICKING CONFIRMADO
+                </span>
+                <div className="text-2xl font-bold text-slate-800 font-mono mt-1">
+                  {metrics.PickingConfirmado < 10 ? `0${metrics.PickingConfirmado}` : metrics.PickingConfirmado}
+                </div>
+                <span className="text-[10px] text-purple-600 font-semibold uppercase mt-1 block">
+                  LISTO EMISIÓN DTE 52
+                </span>
+              </div>
+              <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+                <CheckCircle2 size={22} />
+              </div>
+            </div>
+
+            {/* TOTAL DESPACHADOS */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  DESPACHADOS (PGI 601)
+                </span>
+                <div className="text-2xl font-bold text-slate-800 font-mono mt-1">
+                  {metrics.DespachadosTotal < 10 ? `0${metrics.DespachadosTotal}` : metrics.DespachadosTotal}
+                </div>
+                <span className="text-[10px] text-emerald-600 font-semibold uppercase mt-1 block">
+                  CAMIÓN EN RUTA
+                </span>
+              </div>
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                <Truck size={22} />
+              </div>
+            </div>
           </div>
+
+          {/* BARRA DE FILTROS */}
+          <OutboundFilters
+            searchTerm={searchTerm}
+            setSearchTerm={(val) => {
+              setSearchTerm(val);
+              setCurrentPage(1);
+            }}
+            statusFilter={statusFilter}
+            setStatusFilter={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
+            fechaDesde={fechaDesde}
+            setFechaDesde={setFechaDesde}
+            fechaHasta={fechaHasta}
+            setFechaHasta={setFechaHasta}
+            onRefresh={fetchData}
+            loading={loading}
+            onSyncSap={handleSyncSap}
+            syncing={syncing}
+          />
+
+          {/* TABLA PRINCIPAL DE ENTREGAS */}
+          <OutboundTable
+            deliveries={deliveries}
+            loading={loading}
+            onSelectDelivery={(delivery) => setSelectedDelivery(delivery)}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
+
+          {/* MODAL DE DETALLE Y PICKEO */}
+          {selectedDelivery && (
+            <PickingDetailModal
+              deliveryId={selectedDelivery.IdEntrega}
+              onClose={() => setSelectedDelivery(null)}
+              onDispatched={() => fetchData()}
+            />
+          )}
         </main>
-
-        <aside className="side-panel">
-          <div className="panel-header" style={{justifyContent: 'space-between'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
-              <span>Detalles del Despacho</span>
-            </div>
-            <span style={{background: '#e5e7eb', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontFamily: 'monospace', color: '#374151'}}>SHP-9021</span>
-          </div>
-          
-          <div className="panel-content">
-            <div className="panel-section-title" style={{display: 'flex', justifyContent: 'space-between', margin: '0 0 16px 0'}}>
-              FLUJO DE DESPACHO
-              <Maximize2 size={14} />
-            </div>
-
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '32px', position: 'relative'}}>
-              <div style={{position: 'absolute', top: '12px', left: '12px', right: '12px', height: '2px', background: 'var(--border-color)', zIndex: 0}}></div>
-              <div style={{position: 'absolute', top: '12px', left: '12px', width: '50%', height: '2px', background: 'var(--text-main)', zIndex: 0}}></div>
-              
-              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: '8px'}}>
-                <div style={{width: '24px', height: '24px', borderRadius: '50%', background: 'var(--text-main)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem'}}>1</div>
-                <div style={{fontSize: '0.65rem', fontFamily: 'monospace'}}>RECOGIDO</div>
-              </div>
-              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: '8px'}}>
-                <div style={{width: '24px', height: '24px', borderRadius: '50%', background: 'var(--text-main)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem'}}>2</div>
-                <div style={{fontSize: '0.65rem', fontFamily: 'monospace'}}>EMPACADO</div>
-              </div>
-              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: '8px'}}>
-                <div style={{width: '24px', height: '24px', borderRadius: '50%', background: 'var(--info-bg)', color: 'var(--info-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 'bold'}}>3</div>
-                <div style={{fontSize: '0.65rem', fontFamily: 'monospace'}}>STAGING</div>
-              </div>
-              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: '8px'}}>
-                <div style={{width: '24px', height: '24px', borderRadius: '50%', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem'}}>4</div>
-                <div style={{fontSize: '0.65rem', fontFamily: 'monospace'}}>SALIDA</div>
-              </div>
-            </div>
-
-            <div className="panel-section-title">DESTINO</div>
-            <div style={{border: '1px solid var(--border-color)', borderRadius: '6px', padding: '16px', marginBottom: '24px'}}>
-              <div style={{fontWeight: 700, fontSize: '1rem', marginBottom: '4px'}}>Global Retail Corp</div>
-              <div style={{fontSize: '0.85rem', color: 'var(--text-muted)'}}>4200 Industrial Pkwy, Bldg 4<br/>Chicago, IL 60609</div>
-            </div>
-
-            <div className="panel-section-title">LISTA DE PICKING (14 UNIDADES)</div>
-            <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px'}}>
-              <div style={{border: '1px solid var(--border-color)', borderRadius: '6px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px'}}>
-                <div style={{width: '40px', height: '40px', background: '#333', borderRadius: '4px'}}></div>
-                <div style={{flex: 1}}>
-                  <div style={{fontWeight: 600, fontSize: '0.85rem'}}>Módulo Sensor X-1</div>
-                  <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace'}}>SKU: IND-293-A</div>
-                </div>
-                <div style={{textAlign: 'right'}}>
-                  <div style={{fontWeight: 600, fontSize: '0.85rem'}}>6 / 6</div>
-                  <CheckCircle size={14} color="var(--success-text)" />
-                </div>
-              </div>
-              
-              <div style={{border: '1px solid var(--border-color)', borderRadius: '6px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px'}}>
-                <div style={{width: '40px', height: '40px', background: '#333', borderRadius: '4px'}}></div>
-                <div style={{flex: 1}}>
-                  <div style={{fontWeight: 600, fontSize: '0.85rem'}}>Fiber Link Pro</div>
-                  <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace'}}>SKU: FL-441-X</div>
-                </div>
-                <div style={{textAlign: 'right'}}>
-                  <div style={{fontWeight: 600, fontSize: '0.85rem'}}>8 / 8</div>
-                  <CheckCircle size={14} color="var(--success-text)" />
-                </div>
-              </div>
-            </div>
-
-            <div className="panel-section-title">VERIFICACIÓN DE QC</div>
-            <div style={{background: 'var(--draft-bg)', padding: '16px', borderRadius: '6px', fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-muted)'}}>
-              "Peso verificado en 12.4kg. Empaque reforzado para electrónica frágil. Etiqueta aplicada." - J. Doe (Empacador)
-            </div>
-
-          </div>
-
-          <div style={{padding: '24px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-color)'}}>
-            <button style={{width: '100%', padding: '12px', background: 'var(--sidebar-bg)', border: '1px solid var(--border-color)', borderRadius: '4px', fontWeight: 600, cursor: 'pointer', marginBottom: '16px'}}>
-              Imprimir Manifiesto
-            </button>
-            <div style={{background: '#333', color: 'white', padding: '16px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.9rem'}}>
-              <CheckCircle size={20} />
-              Envío SHP-9021 Seleccionado
-            </div>
-          </div>
-        </aside>
       </div>
     </>
   );

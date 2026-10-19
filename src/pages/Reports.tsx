@@ -1,34 +1,55 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Header from '../components/Header';
 import { useInventoryData } from '../hooks/useInventoryData';
+import { useAuth } from '../contexts/AuthContext';
+import { CustomDatePicker } from '../components/common/CustomDatePicker';
 import { BarChart2, Route, Box, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { extractUniqueOptions, calculateDashboardMetrics } from '../utils/reportsLogic';
 
+const getTodayStr = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const getDaysAgoStr = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 const Reports: React.FC = () => {
   const { adjustments } = useInventoryData();
+  const { lineaNegocio, lineaNegocioLabel } = useAuth();
   
-  // Perfil / LoB simulation
-  const [activeLoB, setActiveLoB] = useState<'TODOS' | 'INT' | 'FP'>('TODOS');
+  // Línea de negocio activa según el Visor seleccionado en cabecera
+  const activeLoB = lineaNegocio;
   
   // Dashboard Filters
   const [originFilter, setOriginFilter] = useState('TODOS');
   const [destFilter, setDestFilter] = useState('TODOS');
   const [materialFilter, setMaterialFilter] = useState('TODOS');
-  const [daysFilter, setDaysFilter] = useState<number>(30);
+  // Rango de fechas seleccionable mediante CustomDatePicker (por defecto 90 días)
+  const [startDate, setStartDate] = useState<string>(() => getDaysAgoStr(90));
+  const [endDate, setEndDate] = useState<string>(() => getTodayStr());
+
+  // Reiniciar filtros al cambiar de visor (Farmacias Privadas / Intermediación)
+  useEffect(() => {
+    setOriginFilter('TODOS');
+    setDestFilter('TODOS');
+    setMaterialFilter('TODOS');
+  }, [lineaNegocio]);
 
   // Extract available options dynamically based on active profile
   const { origins, destinations, materials } = useMemo(() => 
     extractUniqueOptions(adjustments, activeLoB), 
   [adjustments, activeLoB]);
-
-  // Handle Profile Switch (reset filters)
-  const handleProfileSwitch = (lob: 'TODOS' | 'INT' | 'FP') => {
-    setActiveLoB(lob);
-    setOriginFilter('TODOS');
-    setDestFilter('TODOS');
-    setMaterialFilter('TODOS');
-  };
 
   // Calculate metrics based on current filters
   const { totalUnits, topMaterial, topRoute, topRoutes, chartData } = useMemo(() => 
@@ -37,55 +58,21 @@ const Reports: React.FC = () => {
       origin: originFilter,
       destination: destFilter,
       material: materialFilter,
-      days: daysFilter
+      startDate,
+      endDate
     }),
-  [adjustments, activeLoB, originFilter, destFilter, materialFilter, daysFilter]);
+  [adjustments, activeLoB, originFilter, destFilter, materialFilter, startDate, endDate]);
 
-  const getLobLabel = () => {
-    if (activeLoB === 'TODOS') return 'General';
-    if (activeLoB === 'INT') return 'Intermediación';
-    return 'Farmacias Privadas';
-  };
-
-  const chartColor = activeLoB === 'INT' ? '#3b82f6' : (activeLoB === 'FP' ? '#10b981' : '#6366f1');
+  const chartColor = lineaNegocio === 'INT' ? '#059669' : '#2563eb';
 
   return (
     <>
       <Header showSearch={false} />
       <main className="page-content">
         <h2 className="page-title">Central de Reportes</h2>
-        <p className="page-subtitle">Análisis de flujo de materiales y rutas de almacén ({getLobLabel()}).</p>
-
-        {/* Profile Selector (Simulador de usuario) */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-          <button
-            onClick={() => handleProfileSwitch('TODOS')}
-            style={{
-              padding: '8px 16px', borderRadius: '6px', border: 'none',
-              background: activeLoB === 'TODOS' ? 'var(--primary-main)' : 'var(--bg-color)',
-              color: activeLoB === 'TODOS' ? 'white' : 'var(--text-muted)',
-              fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >Vista Global</button>
-          <button
-            onClick={() => handleProfileSwitch('INT')}
-            style={{
-              padding: '8px 16px', borderRadius: '6px', border: 'none',
-              background: activeLoB === 'INT' ? 'var(--primary-main)' : 'var(--bg-color)',
-              color: activeLoB === 'INT' ? 'white' : 'var(--text-muted)',
-              fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >Perfil: Intermediación</button>
-          <button
-            onClick={() => handleProfileSwitch('FP')}
-            style={{
-              padding: '8px 16px', borderRadius: '6px', border: 'none',
-              background: activeLoB === 'FP' ? 'var(--primary-main)' : 'var(--bg-color)',
-              color: activeLoB === 'FP' ? 'white' : 'var(--text-muted)',
-              fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >Perfil: Farmacias Privadas</button>
-        </div>
+        <p className="page-subtitle" style={{ marginBottom: '24px' }}>
+          Análisis de flujo de materiales y rutas de almacén ({lineaNegocioLabel}).
+        </p>
 
         {/* Filters Bar */}
         <div style={{ background: 'white', padding: '16px 20px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px', display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -120,16 +107,35 @@ const Reports: React.FC = () => {
             </datalist>
           </div>
           <div style={{ flex: 1, minWidth: '150px' }}>
-            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', letterSpacing: '0.5px' }}>RANGO DE FECHA</label>
-            <select value={daysFilter} onChange={e => setDaysFilter(Number(e.target.value))} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
-              <option value={7}>Últimos 7 Días</option>
-              <option value={14}>Últimos 14 Días</option>
-              <option value={30}>Últimos 30 Días</option>
-              <option value={90}>Últimos 90 Días</option>
-            </select>
+            <CustomDatePicker
+              label="FECHA DESDE"
+              placeholder="dd/mm/aaaa"
+              value={startDate}
+              onChange={setStartDate}
+              maxDate={endDate}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <CustomDatePicker
+              label="FECHA HASTA"
+              placeholder="dd/mm/aaaa"
+              value={endDate}
+              onChange={setEndDate}
+              minDate={startDate}
+            />
           </div>
           <div>
-            <button onClick={() => { setOriginFilter('TODOS'); setDestFilter('TODOS'); setMaterialFilter('TODOS'); }} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border-color)', background: '#f8fafc', fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+            <button 
+              type="button"
+              onClick={() => { 
+                setOriginFilter('TODOS'); 
+                setDestFilter('TODOS'); 
+                setMaterialFilter('TODOS');
+                setStartDate(getDaysAgoStr(90));
+                setEndDate(getTodayStr());
+              }} 
+              style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border-color)', background: '#f8fafc', fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+            >
               Limpiar
             </button>
           </div>

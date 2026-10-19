@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import { VISOR_API_URL, getApiHeaders } from '../config/api';
 
 const cache = new Map<string, any>();
 
@@ -51,7 +51,9 @@ export const ArrivalsService = {
 
     const cacheKey = `arrivals-${query.toString()}`;
     
-    const res = await fetch(`${API_URL}/ol/inbound/received?${query.toString()}`);
+    const res = await fetch(`${VISOR_API_URL}/inbound/received?${query.toString()}`, {
+      headers: getApiHeaders()
+    });
     const data = await res.json();
 
     if (data.status !== 'success' || !Array.isArray(data.data)) {
@@ -111,8 +113,10 @@ export const ArrivalsService = {
       const lotesSet = new Set(entregas.map((e: any) => e.lote).filter(Boolean));
 
       return {
-        rowId: `${item.numeroPreAviso}-${item.codigoProducto}-${item.posicionPedidoCompra}`,
+        rowId: `${item.numeroPreAviso}-${item.idRecepcion || ''}-${item.codigoProducto}-${item.posicionPedidoCompra}`,
         id: item.numeroPreAviso,
+        idRecepcion: item.idRecepcion,
+        numeroFactura: item.numeroFactura || '-',
         provider: item.rutProveedor,
         rut: item.rutProveedor,
         lineNo: item.posicionPedidoCompra,
@@ -161,7 +165,9 @@ export const ArrivalsService = {
 
   getProviders: async (lineaNegocio: string): Promise<string[]> => {
     try {
-      const res = await fetch(`${API_URL}/ol/inbound/received/providers?lineaNegocio=${lineaNegocio}`);
+      const res = await fetch(`${VISOR_API_URL}/inbound/received/providers?lineaNegocio=${lineaNegocio}`, {
+        headers: getApiHeaders()
+      });
       const data = await res.json();
       return data.status === 'success' && Array.isArray(data.data) ? data.data : [];
     } catch {
@@ -170,25 +176,32 @@ export const ArrivalsService = {
   },
 
   getDocuments: async (poNumber: string, preAviso: string) => {
-    const res = await fetch(`${API_URL}/ol/inbound/documents/po/${poNumber}/${preAviso}`);
+    const res = await fetch(`${VISOR_API_URL}/inbound/documents/po/${poNumber}/${preAviso}`, {
+      headers: getApiHeaders()
+    });
     const data = await res.json();
     return data.status === 'success' ? data.data : [];
   },
 
   liberarSAP: async (numeroPreAviso: string) => {
-    const res = await fetch(`${API_URL}/ol/inbound/received/${numeroPreAviso}/liberar`, { method: 'POST' });
+    const res = await fetch(`${VISOR_API_URL}/inbound/received/${numeroPreAviso}/liberar`, { 
+      method: 'POST',
+      headers: getApiHeaders()
+    });
     return await res.json();
   },
 
   getPoReleaseStatus: async (poNumber: string) => {
-    const res = await fetch(`${API_URL}/ol/inbound/po/${poNumber}/release-status`);
+    const res = await fetch(`${VISOR_API_URL}/inbound/po/${poNumber}/release-status`, {
+      headers: getApiHeaders()
+    });
     return await res.json();
   },
 
   adjuntarDocumentoASap: async (documentId: number) => {
-    const res = await fetch(`${API_URL}/ol/inbound/documents/${documentId}/adjuntar-sap`, { 
+    const res = await fetch(`${VISOR_API_URL}/inbound/documents/${documentId}/adjuntar-sap`, { 
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getApiHeaders()
     });
     return await res.json();
   }

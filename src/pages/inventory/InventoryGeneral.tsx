@@ -60,8 +60,15 @@ const InventoryGeneral: React.FC = () => {
   return (
     <>
       <Header showSearch={false} />
-      <main className="page-content">
-        <h2 className="page-title" style={{ marginBottom: '24px' }}>Registros y movimientos generales</h2>
+      <div className="flex flex-col min-h-[calc(100vh-64px)] bg-slate-50 w-full">
+        <main className="px-8 py-6 w-full flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 uppercase">
+                AJUSTE DE INVENTARIOS
+              </h2>
+            </div>
+          </div>
 
         <InventoryFilters 
           activeTab="generales"
@@ -85,7 +92,8 @@ const InventoryGeneral: React.FC = () => {
           setSelectedAjuste={setSelectedAjuste}
         />
       </main>
-    </>
+    </div>
+  </>
   );
 };
 

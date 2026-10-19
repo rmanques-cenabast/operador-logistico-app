@@ -1,6 +1,17 @@
 import React from 'react';
-import { X, Package, Database, Truck, Grid, Building2, User, Calendar, CheckCircle2, MessageSquare, ArrowRight, FileText, ArrowRightLeft, AlertCircle } from 'lucide-react';
+import { 
+  X, 
+  Package, 
+  Database, 
+  Calendar, 
+  CheckCircle, 
+  Clock, 
+  AlertCircle, 
+  ArrowRight, 
+  MessageSquare
+} from 'lucide-react';
 import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
+import { getMovimientoTypeBadge, renderStockBadge } from './InventoryTable';
 
 interface MovementDetailModalProps {
   header: AdjustmentHeader;
@@ -8,221 +19,362 @@ interface MovementDetailModalProps {
   onClose: () => void;
 }
 
-const renderBadge = (tipoStockRaw: string | undefined | null) => {
-  const tipoStock = String(tipoStockRaw || '').toUpperCase();
-  if (!tipoStock || tipoStock === 'UNDEFINED' || tipoStock === 'NULL') {
-    return <span style={{ color: 'var(--text-muted)' }}>-</span>;
-  }
-  let stockLabel = 'L. UTILIZACIÓN';
-  let stockColor = '#15803d';
-  let stockBg = '#dcfce7';
-  if (tipoStock === 'BLOQUEADO') {
-    stockLabel = 'BLOQUEADO';
-    stockColor = '#b91c1c';
-    stockBg = '#fee2e2';
-  } else if (tipoStock === 'CALIDAD') {
-    stockLabel = 'C. CALIDAD';
-    stockColor = '#b45309';
-    stockBg = '#fef3c7';
-  }
-  return (
-    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: stockColor, background: stockBg, padding: '3px 8px', borderRadius: '4px', border: `1px solid ${stockColor}40`, whiteSpace: 'nowrap' }}>
-      {stockLabel}
-    </span>
-  );
-};
-
 export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header, detalle, onClose }) => {
-  // Determine success status for the badge
   const estadoUpper = (header.Estado_SAP || '').toUpperCase();
   const isExitoso = estadoUpper === 'PROCESADO' || estadoUpper === 'EXITOSO' || estadoUpper === 'COMPLETADO';
-  
+  const isError = estadoUpper.includes('ERROR') || estadoUpper.includes('FALLO') || estadoUpper === 'RECHAZADO';
+
+  const movBadge = getMovimientoTypeBadge(detalle.Tipo_Movimiento, detalle.Almacen_Origen, detalle.Almacen_Destino);
+
+  const esEgreso = ['711', '717', '551', '553', '555', '331', '333'].includes(detalle.Tipo_Movimiento);
+  const cantidadReal = esEgreso ? -Math.abs(detalle.Cantidad) : detalle.Cantidad;
+
+  // Formato de fecha
+  const fechaFmtCompleta = (() => {
+    const raw = header.Fecha_Creacion ? String(header.Fecha_Creacion).replace('Z', '') : '';
+    const d = raw ? new Date(raw) : null;
+    if (!d || isNaN(d.getTime())) return '-';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const time = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    return `${day}-${month}-${year} (${time})`;
+  })();
+
+  // Parsear logs de error de SAP si existen
+  let errorText = '';
+  if (header.logsSap && header.logsSap.length > 0) {
+    const ultimoLog = header.logsSap[header.logsSap.length - 1];
+    if (ultimoLog.Respuesta_SAP) {
+      try {
+        const res = JSON.parse(ultimoLog.Respuesta_SAP);
+        if (res.mensajes && Array.isArray(res.mensajes) && res.mensajes.length > 0) {
+          errorText = res.mensajes.map((m: any) => `[${m.tipo}] ${m.mensaje}`).join(' | ');
+        } else if (res.error) {
+          errorText = res.error;
+        }
+      } catch (e) {
+        errorText = ultimoLog.Respuesta_SAP;
+      }
+    }
+  }
+
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ width: '600px', maxWidth: '95vw', background: '#f8fafc', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        
-        {/* ENCABEZADO */}
-        <div style={{ padding: '24px', background: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0' }}>
-          
-          {/* IZQUIERDA: ICONO + TÍTULOS */}
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Package color="white" size={24} />
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 600, letterSpacing: '-0.02em' }}>
-                ZCEN: {detalle.Codigo_Material}
-              </h3>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {isExitoso ? (
-                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700, border: '1px solid #bbf7d0' }}>
-                     <CheckCircle2 size={12} /> PROCESADO EN SAP
-                   </span>
-                ) : (
-                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700, border: '1px solid #fde68a' }}>
-                     PENDIENTE EN SAP
-                   </span>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', fontSize: '0.8rem', color: '#475569' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Grid size={14} color="#94a3b8" />
-                  <span>Lote SAP: <strong style={{ color: '#0f172a' }}>{detalle.Lote_SAP || 'N/A'}</strong></span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Building2 size={14} color="#94a3b8" />
-                  <span>Línea: <strong style={{ color: '#0f172a' }}>{header.Linea_Negocio || 'CENABAST'}</strong></span>
-                </div>
-              </div>
-            </div>
+    <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div
+        className="modal-container"
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: '1080px', maxWidth: '95vw', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column' }}
+      >
+        {/* Header */}
+        <div className="panel-header" style={{ padding: '18px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', fontSize: '1.05rem', color: '#0f172a', background: '#f8fafc' }}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-mono text-base font-bold text-slate-900">
+              Detalle AJUSTE: {header.Nro_Ajuste}
+            </span>
+            <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded border border-blue-200">
+              ZCEN: {detalle.Codigo_Material}
+            </span>
+            {detalle.Numero_OC && (
+              <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 px-2.5 py-1 rounded border border-amber-200" title="Orden de Compra Asociada">
+                OC: {detalle.Numero_OC}
+              </span>
+            )}
+            <span className="text-xs font-mono font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              LOTE: {detalle.Lote_SAP || 'N/A'}
+            </span>
+            <span className="text-xs font-mono font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              CENTRO: {header.Centro || '6000'}
+            </span>
           </div>
-
-          {/* DERECHA: CAJAS Y CERRAR */}
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.75rem', color: '#64748b' }}>
-                <span>OC:</span>
-                <strong style={{ color: '#0f172a', fontSize: '0.8rem' }}>{detalle.Numero_OC ? `${detalle.Numero_OC}` : 'Sin OC'}</strong>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.75rem', color: '#64748b' }}>
-                <span>Folio:</span>
-                <strong style={{ color: '#0f172a', fontSize: '0.8rem' }}>{header.Nro_Ajuste}</strong>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', padding: '4px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.75rem', color: '#64748b' }}>
-                <span>Centro:</span>
-                <strong style={{ color: '#0f172a', fontSize: '0.8rem' }}>{header.Centro || '6000'}</strong>
-              </div>
-            </div>
-            
-            <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}>
-              <X size={20} />
-            </button>
-          </div>
+          <button 
+            onClick={onClose} 
+            className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-500 cursor-pointer"
+            title="Cerrar modal"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        {/* CONTENIDO PRINCIPAL */}
-        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', background: '#f8fafc' }}>
+        {/* Contenido Modularizado */}
+        <div className="panel-content" style={{ padding: '24px', maxHeight: '80vh', overflowY: 'auto' }}>
           
-          {/* FLUJO DE STOCK */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>
-              FLUJO DE STOCK (MOV. {detalle.Tipo_Movimiento})
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 40px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: '#475569' }}>Stock Origen</span>
-                {renderBadge((detalle as any).StockOrigen || (detalle as any).stockorigen)}
-              </div>
+          {/* Stepper del flujo */}
+          <div 
+            className="panel-section-title" 
+            style={{ marginTop: '0', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, color: '#475569', letterSpacing: '1px' }}
+          >
+            ESTADO DEL FLUJO DE INVENTARIO
+          </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, padding: '0 20px' }}>
-                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a' }}>
-                  +{detalle.Cantidad} Un.
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '56px', marginTop: '20px', padding: '0 80px' }}>
+            {/* Step 1: WMS */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', zIndex: 2 }}>
+                <CheckCircle size={20} />
+              </div>
+              <div style={{ position: 'absolute', top: '44px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.75rem', fontWeight: 700, color: '#059669', width: '180px', textAlign: 'center' }}>
+                REGISTRADO EN WMS
+              </div>
+            </div>
+
+            {/* Connecting Line */}
+            <div style={{ flex: 1, height: '4px', background: '#e2e8f0', margin: '0 8px', position: 'relative', borderRadius: '2px' }}>
+              <div style={{ 
+                position: 'absolute', 
+                left: 0, 
+                top: 0, 
+                bottom: 0, 
+                width: isExitoso ? '100%' : (isError ? '100%' : '50%'), 
+                background: isExitoso ? '#10b981' : (isError ? '#ef4444' : '#f59e0b'), 
+                borderRadius: '2px' 
+              }}></div>
+            </div>
+
+            {/* Step 2: SAP ERP */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ 
+                width: '36px', 
+                height: '36px', 
+                borderRadius: '50%', 
+                background: isExitoso ? '#10b981' : (isError ? '#ef4444' : '#f59e0b'), 
+                color: 'white', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                fontWeight: 'bold', 
+                zIndex: 2 
+              }}>
+                {isExitoso ? <CheckCircle size={20} /> : (isError ? <AlertCircle size={20} /> : <Clock size={20} />)}
+              </div>
+              <div style={{ 
+                position: 'absolute', 
+                top: '44px', 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                fontSize: '0.75rem', 
+                fontWeight: 700, 
+                color: isExitoso ? '#059669' : (isError ? '#b91c1c' : '#b45309'), 
+                width: '180px', 
+                textAlign: 'center' 
+              }}>
+                {isExitoso ? 'SINCRONIZADO EN SAP' : (isError ? 'ERROR EN SAP' : 'PENDIENTE EN SAP')}
+              </div>
+            </div>
+          </div>
+
+          {/* Tarjeta de integración SAP ERP */}
+          <div className="bg-slate-50/80 rounded-xl border border-slate-200 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+                <Database size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  INTEGRACIÓN SAP ERP
+                </div>
+                <div className="text-sm font-mono font-bold text-slate-900 mt-0.5">
+                  {header.Documento_SAP_Ref ? (
+                    <span>DOC. MATERIAL SAP: <span className="text-blue-600">{header.Documento_SAP_Ref}</span></span>
+                  ) : (
+                    <span className="text-amber-600">PENDIENTE DE CONTABILIZACIÓN EN SAP</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span 
+                className="inline-block px-3 py-1 rounded text-xs font-bold tracking-wide uppercase"
+                style={{ background: movBadge.bg, color: movBadge.color, border: `1px solid ${movBadge.border}` }}
+              >
+                OPERACIÓN {movBadge.label}
+              </span>
+              <span 
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold tracking-wide uppercase ${
+                  isExitoso 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                    : (isError 
+                        ? 'bg-rose-100 text-rose-800 border border-rose-200' 
+                        : 'bg-amber-100 text-amber-800 border border-amber-200')
+                }`}
+              >
+                {isExitoso && <CheckCircle size={13} />}
+                {isError && <AlertCircle size={13} />}
+                {!isExitoso && !isError && <Clock size={13} />}
+                {isExitoso ? 'SINCRONIZADO' : (isError ? 'FALLO SAP' : 'PENDIENTE SAP')}
+              </span>
+            </div>
+          </div>
+
+          {/* Resumen de Movimiento y Stock */}
+          <div 
+            className="panel-section-title" 
+            style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, color: '#475569', letterSpacing: '1px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          >
+            <Package size={16} />
+            RESUMEN DE MOVIMIENTO Y STOCK
+          </div>
+
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', background: 'white', marginBottom: '24px' }}>
+            {/* Cabecera del item */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                  LÍNEA {header.Linea_Negocio || 'CENABAST'}
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '8px', color: '#cbd5e1' }}>
-                  <div style={{ height: '1px', background: '#e2e8f0', flex: 1 }}></div>
-                  <Truck size={16} />
-                  <div style={{ height: '1px', background: '#e2e8f0', flex: 1 }}></div>
-                  <ArrowRight size={14} style={{ marginLeft: '-4px' }} />
-                </div>
+                <span className="font-mono text-sm font-bold text-slate-900">
+                  ZCEN: {detalle.Codigo_Material}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: '#475569' }}>Stock Destino</span>
-                {renderBadge((detalle as any).StockDestino || (detalle as any).stockdestino)}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ height: '1px', background: '#e2e8f0', margin: '0 -24px' }}></div>
-
-          {/* LISTAS DE DETALLES */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            
-            {/* CONTABILIZACION SAP */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <Database size={14} /> CONTABILIZACIÓN SAP
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><FileText size={14} /> Doc. Material</span>
-                <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{header.Documento_SAP_Ref || 'Pendiente'}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><ArrowRightLeft size={14} /> Clase Mov.</span>
-                <strong style={{ color: '#0f172a' }}>{detalle.Tipo_Movimiento}</strong>
-              </div>
-            </div>
-
-            {/* REGISTRO WMS */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <FileText size={14} /> REGISTRO WMS
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><User size={14} /> Operador</span>
-                <strong style={{ color: '#0f172a' }}>{header.Usuario_OL}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> Fecha Registro</span>
-                <span style={{ color: '#475569' }}>
-                  {(() => {
-                     const d = new Date(String(header.Fecha_Creacion).replace('Z', ''));
-                     let ampm = d.getHours() >= 12 ? 'p.m.' : 'a.m.';
-                     return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}, ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${ampm}`;
-                  })()}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200 uppercase">
+                  CENTRO {header.Centro || '6000'}
+                </span>
+                <span 
+                  className="inline-block px-2.5 py-0.5 rounded text-xs font-bold tracking-wide uppercase"
+                  style={{ background: movBadge.bg, color: movBadge.color, border: `1px solid ${movBadge.border}` }}
+                >
+                  {movBadge.label}
                 </span>
               </div>
             </div>
 
-          </div>
+            {/* 5 Cajas Métricas (Idénticas a Recepción de Mercancía) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
+                <span className="text-[11px] font-medium text-slate-500 block mb-1">LOTE SAP:</span>
+                <strong className="font-mono text-xs md:text-sm text-slate-900 font-bold truncate max-w-full uppercase">
+                  {detalle.Lote_SAP || 'N/A'}
+                </strong>
+              </div>
 
-          {/* MENSAJE DE RECHAZO / ERROR SAP (Si existe) */}
-          {(() => {
-            if (!header.logsSap || header.logsSap.length === 0) return null;
-            const ultimoLog = header.logsSap[header.logsSap.length - 1];
-            if (!ultimoLog.Respuesta_SAP) return null;
-            
-            let errorText = '';
-            try {
-              const res = JSON.parse(ultimoLog.Respuesta_SAP);
-              if (res.mensajes && Array.isArray(res.mensajes) && res.mensajes.length > 0) {
-                errorText = res.mensajes.map((m: any) => `[${m.tipo}] ${m.mensaje}`).join(' | ');
-              } else if (res.error) {
-                errorText = res.error;
-              }
-            } catch (e) {
-              errorText = ultimoLog.Respuesta_SAP;
-            }
-
-            if (!errorText) return null;
-
-            return (
-              <div style={{ background: '#fef2f2', padding: '16px', borderRadius: '6px', border: '1px solid #fecaca', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#991b1b', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase' }}>
-                  <AlertCircle size={14} /> Detalle de Respuesta SAP
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#7f1d1d', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
-                  {errorText}
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
+                <span className="text-[11px] font-medium text-slate-500 block mb-1">ALMACÉN (ORIGEN → DEST.):</span>
+                <div className="flex items-center gap-1 font-mono text-xs md:text-sm text-slate-900 font-bold">
+                  <span>{detalle.Almacen_Origen || '-'}</span>
+                  <ArrowRight size={12} className="text-blue-500" />
+                  <span>{detalle.Almacen_Destino || '-'}</span>
                 </div>
               </div>
-            );
-          })()}
 
-          {/* OBSERVACIONES */}
-          <div style={{ background: '#f1f5f9', padding: '16px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MessageSquare size={14} /> Observaciones / Motivo
-            </div>
-            <div style={{ fontSize: '0.85rem', color: '#0f172a' }}>
-              {detalle.Motivo || 'Sin observaciones registradas.'}
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
+                <span className="text-[11px] font-medium text-slate-500 block mb-1">STOCK ORIGEN:</span>
+                <div className="flex justify-center items-center">
+                  {renderStockBadge((detalle as any).StockOrigen || (detalle as any).stockorigen)}
+                </div>
+              </div>
+
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
+                <span className="text-[11px] font-medium text-slate-500 block mb-1">STOCK DESTINO:</span>
+                <div className="flex justify-center items-center">
+                  {renderStockBadge((detalle as any).StockDestino || (detalle as any).stockdestino)}
+                </div>
+              </div>
+
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center col-span-2 sm:col-span-1">
+                <span className="text-[11px] font-medium text-slate-500 block mb-1">CANTIDAD AJUSTADA:</span>
+                <strong className={`font-mono text-xs md:text-sm font-bold ${
+                  cantidadReal > 0 ? 'text-emerald-600' : (cantidadReal < 0 ? 'text-rose-600' : 'text-slate-800')
+                }`}>
+                  {cantidadReal > 0 ? `+${cantidadReal}` : cantidadReal} UN.
+                </strong>
+              </div>
             </div>
           </div>
 
+          {/* Historial de Registro y Trazabilidad */}
+          <div 
+            className="panel-section-title" 
+            style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, color: '#475569', letterSpacing: '1px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          >
+            <Calendar size={16} />
+            DATOS DE REGISTRO Y TRAZABILIDAD
+          </div>
+
+          <div className="border border-slate-200 rounded-xl overflow-hidden mb-6 bg-white shadow-sm">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-4 text-left">FECHA Y HORA</th>
+                  <th className="py-3 px-3 text-center">FOLIO AJUSTE</th>
+                  <th className="py-3 px-3 text-center">OPERADOR WMS</th>
+                  <th className="py-3 px-3 text-center">OPERACIÓN SAP</th>
+                  <th className="py-3 px-3 text-center">DOC. SAP REF.</th>
+                  <th className="py-3 px-3 text-center">ORDEN COMPRA</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                <tr className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
+                    {fechaFmtCompleta}
+                  </td>
+                  <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-900">
+                    {header.Nro_Ajuste}
+                  </td>
+                  <td className="py-3.5 px-3 text-center font-medium text-slate-700 uppercase">
+                    {header.Usuario_OL || '-'}
+                  </td>
+                  <td className="py-3.5 px-3 text-center">
+                    <span 
+                      className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase"
+                      style={{ background: movBadge.bg, color: movBadge.color, border: `1px solid ${movBadge.border}` }}
+                    >
+                      {movBadge.label}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-3 text-center font-mono">
+                    {header.Documento_SAP_Ref ? (
+                      <span className="font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
+                        {header.Documento_SAP_Ref}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 uppercase">PENDIENTE</span>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-3 text-center font-mono font-semibold text-slate-700">
+                    {detalle.Numero_OC || '-'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mensaje de Respuesta / Error SAP (si existe) */}
+          {errorText && (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 mb-6 flex flex-col gap-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-rose-800 uppercase tracking-wide">
+                <AlertCircle size={15} className="text-rose-600" />
+                <span>DETALLE DE RESPUESTA SAP</span>
+              </div>
+              <div className="text-xs text-rose-900 font-mono whitespace-pre-wrap leading-relaxed">
+                {errorText}
+              </div>
+            </div>
+          )}
+
+          {/* Observaciones / Motivo */}
+          <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/80 mb-2 flex flex-col items-center justify-center text-center">
+            <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
+              <MessageSquare size={15} className="text-slate-500" />
+              <span>OBSERVACIONES / MOTIVO DEL AJUSTE</span>
+            </div>
+            <div className="inline-block bg-white px-6 py-2.5 rounded-lg border border-slate-200 font-mono text-xs md:text-sm text-slate-800 text-center max-w-2xl shadow-sm">
+              {detalle.Motivo ? detalle.Motivo : <span className="text-slate-400">SIN OBSERVACIONES REGISTRADAS.</span>}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="panel-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', background: '#f8fafc' }}>
+          <button 
+            onClick={onClose} 
+            className="px-5 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-lg text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+          >
+            Cerrar
+          </button>
         </div>
 
       </div>

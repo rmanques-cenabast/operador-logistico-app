@@ -30,25 +30,26 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
         <table className="w-full text-left border-collapse text-sm">
           <thead>
             <tr className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
-              <th className="py-3.5 px-5">Pre Aviso</th>
+              <th className="py-3.5 px-5">N° Recepción</th>
               <th className="py-3.5 px-5">RUT Prov.</th>
               <th className="py-3.5 px-5">P. Compra</th>
+              <th className="py-3.5 px-5 text-center">N° Factura</th>
               <th className="py-3.5 px-5">Material</th>
-              <th className="py-3.5 px-5">Lote Físico</th>
+              <th className="py-3.5 px-5">Lote Recibido</th>
               <th className="py-3.5 px-5 text-right">Cant. Recibida</th>
               <th className="py-3.5 px-5 text-center">Doc. Material SAP</th>
-              <th className="py-3.5 px-5 text-center">Estado Físico</th>
+              <th className="py-3.5 px-5 text-center">Estado Recepción</th>
               <th className="py-3.5 px-5 text-center">Sinc. SAP</th>
               <th className="py-3.5 px-5 text-center">Acción</th>
             </tr>
           </thead>
           {isLoading ? (
-            <TableSkeleton rows={5} columns={10} />
+            <TableSkeleton rows={5} columns={11} />
           ) : (
             <tbody className="divide-y divide-slate-200">
               {currentOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={11} className="py-12 text-center text-slate-400 text-sm">
                     No se encontraron recepciones confirmadas.
                   </td>
                 </tr>
@@ -56,7 +57,7 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
                 currentOrders.map((order, idx) => (
                   <tr key={`${order.rowId}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-4 px-5 font-mono font-bold text-slate-900">
-                      {order.id}
+                      {order.idRecepcion ? `REC-${order.idRecepcion}` : (order.id ? order.id.replace('PRE-', 'REC-') : 'REC')}
                     </td>
                     <td className="py-4 px-5 font-mono text-slate-600 truncate max-w-[140px]">
                       {order.provider}
@@ -65,6 +66,15 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
                       <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
                         {order.poNumber}
                       </span>
+                    </td>
+                    <td className="py-4 px-5 text-center font-mono">
+                      {order.numeroFactura && order.numeroFactura !== '-' ? (
+                        <span className="font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded border border-amber-200 text-xs">
+                          {order.numeroFactura}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-medium">-</span>
+                      )}
                     </td>
                     <td className="py-4 px-5 font-mono text-slate-800 font-bold">
                       {order.productCode}

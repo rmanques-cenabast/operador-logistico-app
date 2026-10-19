@@ -15,16 +15,15 @@ const Inbound: React.FC = () => {
   const [selectedPA, setSelectedPA] = useState<string | null>(null);
   
   // Filtros
-  const [filterMonth, setFilterMonth] = useState('TODOS');
-  const [filterYear, setFilterYear] = useState('TODOS');
-  const [filterProvider, setFilterProvider] = useState('TODOS');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterProvider, setFilterProvider] = useState('');
+  const [filterPoNumber, setFilterPoNumber] = useState('');
   const [filterStatus, setFilterStatus] = useState('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   
-  const { user } = useAuth();
-  const lineaNegocio = user?.role === 'intermediacion' ? 'INT' : 'FP';
-  const lineaNegocioLabel = user?.role === 'intermediacion' ? 'INTERMEDIACIÓN' : 'FARMACIAS PRIVADAS';
+  const { lineaNegocio, lineaNegocioLabel } = useAuth();
 
   // Usar hook usePolling con caché en memoria SWR
   const { data: preAvisoLines, isLoading } = usePolling<PreAvisoLine[]>({
@@ -37,50 +36,49 @@ const Inbound: React.FC = () => {
   const lines: PreAvisoLine[] = preAvisoLines || [];
 
   const uniqueProviders = useMemo(() => {
-    return Array.from(new Set(lines.map(l => l.provider)));
-  }, [lines]);
-  
-  // Métricas
-  const totalActivos = useMemo(() => Array.from(new Set(lines.map(l => l.preAvisoId))).length, [lines]);
-  const pendientesOL = useMemo(() => {
-    return Array.from(new Set(lines.filter(l => l.status === 'PENDIENTE' || l.status === 'NOTIFICADO').map(l => l.preAvisoId))).length;
+    return Array.from(new Set(lines.map(l => l.provider))).filter(Boolean);
   }, [lines]);
 
   // Filtrado de registros
   const filteredLines = useMemo(() => {
     return lines.filter(line => {
-      if (filterProvider !== 'TODOS' && line.provider !== filterProvider) return false;
+      // Filtro de Proveedor (RUT o nombre)
+      if (filterProvider.trim()) {
+        const provTerm = filterProvider.toLowerCase().trim();
+        if (!line.provider.toLowerCase().includes(provTerm)) return false;
+      }
+
+      // Filtro de Pedido de Compra (PC)
+      if (filterPoNumber.trim()) {
+        const poTerm = filterPoNumber.toLowerCase().trim();
+        if (!line.poNumber.toLowerCase().includes(poTerm)) return false;
+      }
+
+      // Filtro de Estado
       if (filterStatus !== 'TODOS') {
         const isCompleta = line.status === 'APROBADO OL' || line.qty <= 0;
         if (filterStatus === 'PENDIENTE' && isCompleta) return false;
         if (filterStatus === 'APROBADO OL' && !isCompleta) return false;
       }
-      if (filterMonth !== 'TODOS' || filterYear !== 'TODOS') {
-        if (!line.receptionDate || line.receptionDate === 'N/A') return false;
-        const dateParts = line.receptionDate.split(' ');
-        if (dateParts.length >= 3) {
-          const monthStr = dateParts[1].toLowerCase().replace(',', '');
-          const yearStr = dateParts[2];
-          const monthsMap: Record<string, string> = {
-            'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04', 'may': '05', 'jun': '06',
-            'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
-          };
-          if (filterMonth !== 'TODOS' && monthsMap[monthStr] !== filterMonth) return false;
-          if (filterYear !== 'TODOS' && yearStr !== filterYear) return false;
+
+      // Filtro de Rango de Fechas
+      if (filterStartDate || filterEndDate) {
+        const dateStr = line.rawReceptionDate ? line.rawReceptionDate.substring(0, 10) : '';
+        if (dateStr) {
+          if (filterStartDate && dateStr < filterStartDate) return false;
+          if (filterEndDate && dateStr > filterEndDate) return false;
         }
       }
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        return (
-          line.preAvisoId.toLowerCase().includes(term) ||
-          line.poNumber.toLowerCase().includes(term) ||
-          line.provider.toLowerCase().includes(term) ||
-          line.productCode.toLowerCase().includes(term)
-        );
+
+      // Barra principal: Búsqueda directa por N° Pre-Aviso
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase().trim();
+        if (!line.preAvisoId.toLowerCase().includes(term)) return false;
       }
+
       return true;
     });
-  }, [lines, filterProvider, filterStatus, filterMonth, filterYear, searchTerm]);
+  }, [lines, filterProvider, filterPoNumber, filterStatus, filterStartDate, filterEndDate, searchTerm]);
 
   const handleOpenDetail = (preAvisoId: string) => {
     setSelectedPA(preAvisoId);
@@ -96,11 +94,6 @@ const Inbound: React.FC = () => {
           {/* Header de Página */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-bold tracking-wider uppercase text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-                  {lineaNegocioLabel}
-                </span>
-              </div>
               <h2 className="text-2xl font-bold tracking-tight text-slate-900">
                 PRE AVISO
               </h2>
@@ -117,39 +110,20 @@ const Inbound: React.FC = () => {
             </div>
           </div>
 
-          {/* Tarjetas de Métricas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                Pre Avisos Totales
-              </span>
-              <span className="text-4xl font-mono font-bold text-slate-900">
-                {isLoading && lines.length === 0 ? '...' : String(totalActivos).padStart(2, '0')}
-              </span>
-            </div>
-            
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                Pendiente Aprobación OL
-              </span>
-              <span className="text-4xl font-mono font-bold text-amber-600">
-                {isLoading && lines.length === 0 ? '...' : String(pendientesOL).padStart(2, '0')}
-              </span>
-            </div>
-          </div>
-
           {/* Filtros */}
           <PreavisoFilters 
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             filterProvider={filterProvider}
             onProviderChange={setFilterProvider}
+            filterPoNumber={filterPoNumber}
+            onPoNumberChange={setFilterPoNumber}
             filterStatus={filterStatus}
             onStatusChange={setFilterStatus}
-            filterMonth={filterMonth}
-            onMonthChange={setFilterMonth}
-            filterYear={filterYear}
-            onYearChange={setFilterYear}
+            filterStartDate={filterStartDate}
+            onStartDateChange={setFilterStartDate}
+            filterEndDate={filterEndDate}
+            onEndDateChange={setFilterEndDate}
             providers={uniqueProviders}
           />
 
@@ -179,7 +153,7 @@ const Inbound: React.FC = () => {
             onClick={() => setIsUploadOpen(false)}
           >
             <div 
-              className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-[620px] overflow-hidden animate-in zoom-in-95 duration-200"
+              className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-[800px] overflow-hidden animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-8 pt-8 pb-3">

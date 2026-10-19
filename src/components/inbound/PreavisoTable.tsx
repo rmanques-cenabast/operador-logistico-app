@@ -32,6 +32,7 @@ export const PreavisoTable: React.FC<PreavisoTableProps> = ({
             <tr className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
               <th className="py-3.5 px-5">Pre Aviso</th>
               <th className="py-3.5 px-5">RUT Prov.</th>
+              <th className="py-3.5 px-5">Posición</th>
               <th className="py-3.5 px-5">P. Compra</th>
               <th className="py-3.5 px-5">Lote</th>
               <th className="py-3.5 px-5">Material</th>
@@ -41,12 +42,12 @@ export const PreavisoTable: React.FC<PreavisoTableProps> = ({
             </tr>
           </thead>
           {isLoading ? (
-            <TableSkeleton rows={5} columns={8} />
+            <TableSkeleton rows={5} columns={9} />
           ) : (
             <tbody className="divide-y divide-slate-200">
               {currentLines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 text-sm">
                     No se encontraron preavisos para los filtros seleccionados.
                   </td>
                 </tr>
@@ -60,6 +61,9 @@ export const PreavisoTable: React.FC<PreavisoTableProps> = ({
                       </td>
                       <td className="py-4 px-5 font-mono text-slate-600">
                         {line.provider}
+                      </td>
+                      <td className="py-4 px-5 font-mono text-slate-700 font-semibold">
+                        {line.lineNo !== undefined && line.lineNo !== null ? String(line.lineNo).padStart(3, '0') : '-'}
                       </td>
                       <td className="py-4 px-5">
                         <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">

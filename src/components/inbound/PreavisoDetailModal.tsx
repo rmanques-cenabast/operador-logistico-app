@@ -10,6 +10,7 @@ export interface PreAvisoLine {
   batch: string;
   expDate: string;
   receptionDate: string;
+  rawReceptionDate?: string;
   qty: number;
   qtyExpected: number;
   qtyReceived: number;
@@ -38,6 +39,18 @@ export const PreavisoDetailModal: React.FC<PreavisoDetailModalProps> = ({
   const currentLines = lines.filter(l => l.preAvisoId === selectedPreAvisoId);
   const activePA = currentLines[0];
 
+  // Cálculo robusto del estado del pedido (soporta mayúsculas y validación de cantidades)
+  const isCompleta = 
+    activePA?.estadoFisico?.toUpperCase() === 'COMPLETA' ||
+    (currentLines.length > 0 && currentLines.every(l => l.qty <= 0 || (l.qtyReceived >= l.qtyExpected && l.qtyExpected > 0)));
+
+  const isParcial = !isCompleta && (
+    activePA?.estadoFisico?.toUpperCase() === 'PARCIAL' ||
+    currentLines.some(l => (l.qtyReceived || 0) > 0)
+  );
+
+  const isPendiente = !isCompleta && !isParcial;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div 
@@ -60,21 +73,21 @@ export const PreavisoDetailModal: React.FC<PreavisoDetailModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '72px', marginTop: '24px', padding: '0 70px' }}>
             {/* Step 1 */}
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activePA?.estadoFisico !== 'Pendiente' ? 'var(--success-main)' : 'var(--primary-main)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', zIndex: 2 }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: !isPendiente ? 'var(--success-main)' : 'var(--primary-main)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', zIndex: 2 }}>
                 <CheckCircle size={20} />
               </div>
-              <div style={{ position: 'absolute', top: '44px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.8rem', fontWeight: 400, color: activePA?.estadoFisico !== 'Pendiente' ? 'var(--success-main)' : 'var(--primary-main)', width: '160px', textAlign: 'center' }}>
+              <div style={{ position: 'absolute', top: '44px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.8rem', fontWeight: 400, color: !isPendiente ? 'var(--success-main)' : 'var(--primary-main)', width: '160px', textAlign: 'center' }}>
                 PENDIENTE RECEPCIÓN
               </div>
             </div>
 
             {/* Line 1 */}
             <div style={{ flex: 1, height: '4px', background: 'var(--border-color)', margin: '0 8px', position: 'relative', borderRadius: '2px' }}>
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: activePA?.estadoFisico !== 'Pendiente' ? '100%' : '0%', background: activePA?.estadoFisico !== 'Pendiente' ? 'var(--success-main)' : 'var(--primary-main)', borderRadius: '2px' }}></div>
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: !isPendiente ? '100%' : '0%', background: isParcial ? 'var(--warning-main)' : (!isPendiente ? 'var(--success-main)' : 'var(--primary-main)'), borderRadius: '2px' }}></div>
             </div>
 
             {/* Step 1.5 (Parcial) */}
-            {activePA?.estadoFisico === 'Parcial' && (
+            {isParcial && (
               <>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--warning-main)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', zIndex: 2 }}>
@@ -92,10 +105,10 @@ export const PreavisoDetailModal: React.FC<PreavisoDetailModalProps> = ({
 
             {/* Step 2 (Final) */}
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activePA?.estadoFisico === 'Completa' ? 'var(--success-main)' : 'var(--bg-color)', border: activePA?.estadoFisico === 'Completa' ? 'none' : '2px solid var(--border-color)', color: activePA?.estadoFisico === 'Completa' ? 'white' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', zIndex: 2 }}>
-                {activePA?.estadoFisico === 'Completa' ? <CheckCircle size={20} /> : (activePA?.estadoFisico === 'Parcial' ? '3' : '2')}
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: isCompleta ? 'var(--success-main)' : 'var(--bg-color)', border: isCompleta ? 'none' : '2px solid var(--border-color)', color: isCompleta ? 'white' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', zIndex: 2 }}>
+                {isCompleta ? <CheckCircle size={20} /> : (isParcial ? '3' : '2')}
               </div>
-              <div style={{ position: 'absolute', top: '44px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.8rem', fontWeight: 400, color: activePA?.estadoFisico === 'Completa' ? 'var(--success-main)' : 'var(--text-muted)', width: '120px', textAlign: 'center' }}>
+              <div style={{ position: 'absolute', top: '44px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.8rem', fontWeight: 400, color: isCompleta ? 'var(--success-main)' : 'var(--text-muted)', width: '120px', textAlign: 'center' }}>
                 RECIBIDO EN OL
               </div>
             </div>

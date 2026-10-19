@@ -14,15 +14,12 @@ const Arrivals: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 350);
   
-  const { user } = useAuth();
+  const { lineaNegocio, lineaNegocioLabel } = useAuth();
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [documentsMap, setDocumentsMap] = useState<Record<string, any[]>>({});
   const [dbProviders, setDbProviders] = useState<string[]>([]);
-
-  const lineaNegocio = user?.role === 'intermediacion' ? 'INT' : 'FP';
-  const lineaNegocioLabel = user?.role === 'intermediacion' ? 'INTERMEDIACIÓN' : 'FARMACIAS PRIVADAS';
 
   // Cargar lista de proveedores desde la base de datos
   useEffect(() => {
@@ -64,18 +61,29 @@ const Arrivals: React.FC = () => {
     if (isPanelOpen && selectedRowId) {
       const target = orders.find(o => o.id === selectedRowId || o.rowId === selectedRowId);
       if (target) {
-        ArrivalsService.getDocuments(target.poNumber, target.id).then(docs => {
-          const key = `${target.poNumber}-${target.id}`;
-          setDocumentsMap(prev => ({ ...prev, [key]: docs }));
+        const relevantOrders = target.idRecepcion 
+          ? orders.filter(o => o.idRecepcion === target.idRecepcion)
+          : [target];
+        
+        const distinctKeys = new Set<string>();
+        relevantOrders.forEach(o => {
+          if (o.poNumber && o.id) {
+            distinctKeys.add(`${o.poNumber}|${o.id}`);
+          }
+        });
+
+        distinctKeys.forEach(combined => {
+          const [po, preAviso] = combined.split('|');
+          ArrivalsService.getDocuments(po, preAviso).then(docs => {
+            const key = `${po}-${preAviso}`;
+            setDocumentsMap(prev => ({ ...prev, [key]: docs }));
+          });
         });
       }
     }
   }, [isPanelOpen, selectedRowId]);
 
-  const totalRecepciones = pagination.totalItems;
-  const totalDiscrepancias = useMemo(() => Array.from(new Set(
-    orders.filter(l => l.status === 'FALTANTE' || l.status === 'SOBRANTE').map(o => o.id)
-  )).length, [orders]);
+
 
   const handleOpenDetail = (rowId: string) => {
     setSelectedRowId(rowId);
@@ -116,37 +124,13 @@ const Arrivals: React.FC = () => {
           {/* Header de Página */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-bold tracking-wider uppercase text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-                  {lineaNegocioLabel}
-                </span>
-              </div>
               <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                RECEPCIÓN EN BODEGA
+                RECEPCIÓN DE MERCANCÍA
               </h2>
             </div>
           </div>
 
-          {/* Tarjetas de Métricas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                Recepciones Confirmadas
-              </span>
-              <span className="text-4xl font-mono font-bold text-slate-900">
-                {isLoading && orders.length === 0 ? '...' : String(totalRecepciones).padStart(2, '0')}
-              </span>
-            </div>
-            
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                Con Discrepancias
-              </span>
-              <span className={`text-4xl font-mono font-bold ${totalDiscrepancias > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
-                {isLoading && orders.length === 0 ? '...' : String(totalDiscrepancias).padStart(2, '0')}
-              </span>
-            </div>
-          </div>
+
 
           {/* Filtros */}
           <ArrivalsFilters 

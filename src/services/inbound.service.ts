@@ -1,4 +1,4 @@
-import { API_URL } from '../config/api';
+import { VISOR_API_URL, getApiHeaders } from '../config/api';
 
 const cache = new Map<string, any>();
 
@@ -6,10 +6,14 @@ export const InboundService = {
   getPreavisos: async (lineaNegocio: string) => {
     const cacheKey = `inbound-${lineaNegocio}`;
     
-    // Petición a la API sin abortSignal que rompa en render
+    // Petición a la API con cabecera de autenticación
     const [pendingRes, completedRes] = await Promise.all([
-      fetch(`${API_URL}/ol/inbound/pending?lineaNegocio=${lineaNegocio}`),
-      fetch(`${API_URL}/ol/inbound/completed?lineaNegocio=${lineaNegocio}`)
+      fetch(`${VISOR_API_URL}/inbound/pending?lineaNegocio=${lineaNegocio}`, {
+        headers: getApiHeaders()
+      }),
+      fetch(`${VISOR_API_URL}/inbound/completed?lineaNegocio=${lineaNegocio}`, {
+        headers: getApiHeaders()
+      })
     ]);
 
     const pendingData = await pendingRes.json();
@@ -54,14 +58,15 @@ export const InboundService = {
         lineNo: item.posicionPedidoCompra,
         poNumber: item.numeroPedidoCompra,
         productCode: item.codigoProducto,
-        batch: item.lote || 'N/A',
-        expDate: formatDate(item.fechaExpiracion),
+        batch: item.loteAvisado || item.lote || 'N/A',
+        expDate: formatDate(item.fechaVencimientoAvisada || item.fechaExpiracion),
         receptionDate: formatDate(item.fechaRecepcionEst),
-        qty: item.cantidad !== undefined ? item.cantidad : (item.cantidadPendiente !== undefined ? item.cantidadPendiente : Math.max(0, (item.cantidadEsperada || 0) - (item.cantidadRecibida || 0))),
-        qtyExpected: item.cantidadEsperada || 0,
+        rawReceptionDate: item.fechaRecepcionEst || '',
+        qty: item.cantidadPendiente !== undefined ? item.cantidadPendiente : (item.cantidad !== undefined ? item.cantidad : Math.max(0, (item.cantidadAvisada || item.cantidadEsperada || 0) - (item.cantidadRecibida || 0))),
+        qtyExpected: item.cantidadAvisada !== undefined ? item.cantidadAvisada : (item.cantidadEsperada || 0),
         qtyReceived: item.cantidadRecibida || 0,
         uom: 'Un.',
-        status: status,
+        status: status || (item.estadoFisico === 'COMPLETA' ? 'APROBADO OL' : 'PENDIENTE'),
         badge: badge,
         estadoFisico: item.estadoFisico
       };

@@ -1,4 +1,4 @@
-﻿export const extractUniqueOptions = (adjustments: any[], activeLoB: string) => {
+export const extractUniqueOptions = (adjustments: any[], activeLoB: string) => {
   const origins = new Set<string>();
   const destinations = new Set<string>();
   const materials = new Set<string>();
@@ -27,11 +27,25 @@
 };
 
 export const calculateDashboardMetrics = (adjustments: any[], filters: any) => {
-  const { activeLoB, origin, destination, material, days } = filters;
+  const { activeLoB, origin, destination, material, days, startDate, endDate } = filters;
   
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - (days - 1));
-  cutoff.setHours(0, 0, 0, 0);
+  let cutoffStart: Date;
+  let cutoffEnd: Date;
+
+  if (startDate) {
+    cutoffStart = new Date(startDate + 'T00:00:00');
+  } else {
+    cutoffStart = new Date();
+    cutoffStart.setDate(cutoffStart.getDate() - ((days || 30) - 1));
+    cutoffStart.setHours(0, 0, 0, 0);
+  }
+
+  if (endDate) {
+    cutoffEnd = new Date(endDate + 'T23:59:59');
+  } else {
+    cutoffEnd = new Date();
+    cutoffEnd.setHours(23, 59, 59, 999);
+  }
 
   let totalUnits = 0;
   const materialCounts: Record<string, number> = {};
@@ -50,8 +64,13 @@ export const calculateDashboardMetrics = (adjustments: any[], filters: any) => {
     if (!matchesLob) return;
 
     const fechaObj = new Date(h.Fecha_Creacion);
-    if (fechaObj < cutoff) return;
-    const dateStr = fechaObj.toISOString().split('T')[0];
+    if (isNaN(fechaObj.getTime())) return;
+    if (fechaObj < cutoffStart || fechaObj > cutoffEnd) return;
+    
+    const y = fechaObj.getFullYear();
+    const m = String(fechaObj.getMonth() + 1).padStart(2, '0');
+    const day = String(fechaObj.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${day}`;
 
     h.detalles?.forEach((d: any) => {
       // Apply filters
@@ -67,7 +86,7 @@ export const calculateDashboardMetrics = (adjustments: any[], filters: any) => {
       }
 
       if (d.Almacen_Origen && d.Almacen_Destino) {
-                let accion = 'TRASLADO';
+        let accion = 'TRASLADO';
         let cod = d.Tipo_Movimiento || 'N/A';
         if (d.Almacen_Origen === d.Almacen_Destino && d.Tipo_Movimiento) {
           const tipoMap: Record<string, string> = {
@@ -102,12 +121,23 @@ export const calculateDashboardMetrics = (adjustments: any[], filters: any) => {
 
   // Generate chart array
   const chartData = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
+  const startDay = new Date(cutoffStart);
+  startDay.setHours(0, 0, 0, 0);
+  const endDay = new Date(cutoffEnd);
+  endDay.setHours(0, 0, 0, 0);
+
+  const diffTime = Math.max(0, endDay.getTime() - startDay.getTime());
+  const diffDays = Math.min(365, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+
+  for (let i = 0; i < diffDays; i++) {
+    const cur = new Date(startDay);
+    cur.setDate(startDay.getDate() + i);
+    const y = cur.getFullYear();
+    const m = String(cur.getMonth() + 1).padStart(2, '0');
+    const d = String(cur.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
     chartData.push({
-      name: d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
+      name: cur.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
       Unidades: chartDataMap[dateStr] || 0
     });
   }
