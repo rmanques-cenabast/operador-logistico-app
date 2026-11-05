@@ -6,6 +6,8 @@ interface OutboundFiltersProps {
   setSearchTerm: (value: string) => void;
   statusFilter: string;
   setStatusFilter: (value: string) => void;
+  tipoDestinatarioFilter?: string;
+  setTipoDestinatarioFilter?: (value: string) => void;
   fechaDesde: string;
   setFechaDesde: (value: string) => void;
   fechaHasta: string;
@@ -21,6 +23,8 @@ export const OutboundFilters: React.FC<OutboundFiltersProps> = ({
   setSearchTerm,
   statusFilter,
   setStatusFilter,
+  tipoDestinatarioFilter = 'TODOS',
+  setTipoDestinatarioFilter,
   fechaDesde,
   setFechaDesde,
   fechaHasta,
@@ -33,11 +37,12 @@ export const OutboundFilters: React.FC<OutboundFiltersProps> = ({
   const handleClear = () => {
     setSearchTerm('');
     setStatusFilter('TODOS');
-    setFechaDesde('2026-01-01');
+    if (setTipoDestinatarioFilter) setTipoDestinatarioFilter('TODOS');
+    setFechaDesde('2026-04-01');
     setFechaHasta('2026-07-31');
   };
 
-  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'TODOS' || fechaDesde !== '2026-01-01' || fechaHasta !== '2026-07-31';
+  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'TODOS' || tipoDestinatarioFilter !== 'TODOS' || fechaDesde !== '2026-04-01' || fechaHasta !== '2026-07-31';
 
   return (
     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
@@ -63,6 +68,27 @@ export const OutboundFilters: React.FC<OutboundFiltersProps> = ({
 
       {/* FILTROS Y ACCIONES */}
       <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+        {/* SELECT DE TIPO DE DESTINATARIO */}
+        {setTipoDestinatarioFilter && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+              DESTINO:
+            </span>
+            <select
+              value={tipoDestinatarioFilter}
+              onChange={(e) => setTipoDestinatarioFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase cursor-pointer"
+            >
+              <option value="TODOS">TODOS LOS DESTINOS</option>
+              <option value="HOSPITAL">HOSPITALES</option>
+              <option value="CESFAM / APS">CESFAM / APS</option>
+              <option value="MUNICIPALIDAD">MUNICIPALIDADES</option>
+              <option value="SERVICIO DE SALUD">SERVICIOS DE SALUD</option>
+              <option value="FARMACIA PRIVADA">FARMACIAS PRIVADAS</option>
+            </select>
+          </div>
+        )}
+
         {/* SELECT DE ESTADO */}
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">

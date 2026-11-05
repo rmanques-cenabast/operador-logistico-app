@@ -5,8 +5,10 @@ import { OutboundService, OutboundDelivery, OutboundMetrics } from '../services/
 import { OutboundFilters } from '../components/outbound/OutboundFilters';
 import { OutboundTable } from '../components/outbound/OutboundTable';
 import { PickingDetailModal } from '../components/outbound/PickingDetailModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const Outbound: React.FC = () => {
+  const { lineaNegocio, lineaNegocioLabel } = useAuth();
   const [deliveries, setDeliveries] = useState<OutboundDelivery[]>([]);
   const [metrics, setMetrics] = useState<OutboundMetrics>({
     PendientesPicking: 0,
@@ -20,7 +22,8 @@ const Outbound: React.FC = () => {
   const [syncBanner, setSyncBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('TODOS');
-  const [fechaDesde, setFechaDesde] = useState<string>('2026-01-01');
+  const [tipoDestinatarioFilter, setTipoDestinatarioFilter] = useState<string>('TODOS');
+  const [fechaDesde, setFechaDesde] = useState<string>('2026-04-01');
   const [fechaHasta, setFechaHasta] = useState<string>('2026-07-31');
   const [selectedDelivery, setSelectedDelivery] = useState<OutboundDelivery | null>(null);
 
@@ -37,10 +40,12 @@ const Outbound: React.FC = () => {
         OutboundService.getDeliveries({
           status: statusFilter,
           search: searchTerm,
+          canal: lineaNegocio,
+          tipoDestinatario: tipoDestinatarioFilter,
           page: currentPage,
           limit: itemsPerPage
         }),
-        OutboundService.getMetrics()
+        OutboundService.getMetrics(lineaNegocio)
       ]);
 
       if (deliveriesRes.status === 'success' && Array.isArray(deliveriesRes.data)) {
@@ -57,7 +62,7 @@ const Outbound: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, searchTerm, currentPage, itemsPerPage]);
+  }, [statusFilter, searchTerm, lineaNegocio, tipoDestinatarioFilter, currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchData();
@@ -67,11 +72,10 @@ const Outbound: React.FC = () => {
     setSyncing(true);
     setSyncBanner(null);
     try {
-      // Sincroniza desde el rango configurado (por defecto desde Enero hasta Julio 2026 para SAP DEV)
-      const res = await OutboundService.syncFromSap(fechaDesde, fechaHasta);
+      const res = await OutboundService.syncFromSap(fechaDesde, fechaHasta, lineaNegocio);
       setSyncBanner({
         type: 'success',
-        message: `Sincronización SAP exitosa: ${res.nuevas} entregas nuevas incorporadas y ${res.existentes} verificadas (período: ${res.fechaDesde} al ${res.fechaHasta}).`
+        message: `Sincronización SAP (${lineaNegocioLabel}) exitosa: ${res.nuevas} entregas nuevas incorporadas y ${res.existentes} verificadas/actualizadas (período: ${res.fechaDesde} al ${res.fechaHasta}).`
       });
       await fetchData();
     } catch (err: any) {
@@ -90,13 +94,13 @@ const Outbound: React.FC = () => {
       <div className="flex flex-col min-h-[calc(100vh-64px)] bg-slate-50 w-full">
         <main className="px-8 py-6 w-full flex-1">
           {/* TÍTULO */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-slate-900 uppercase">
                 SALIDAS Y PICKEO EN BODEGA (OUTBOUND)
               </h2>
               <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">
-                GESTIÓN DE ENTREGAS DE SALIDA SAP (VL01N), PICKING FÍSICO Y GUÍAS DE DESPACHO DTE 52
+                GESTIÓN DE ENTREGAS DE SALIDA SAP (VL06O / VL01N), PICKING FÍSICO Y GUÍAS DE DESPACHO DTE 52
               </p>
             </div>
           </div>
@@ -118,7 +122,7 @@ const Outbound: React.FC = () => {
               </div>
               <button
                 onClick={() => setSyncBanner(null)}
-                className="text-slate-400 hover:text-slate-600 font-bold ml-4"
+                className="text-slate-400 hover:text-slate-600 font-bold ml-4 cursor-pointer"
               >
                 ✕
               </button>
@@ -212,6 +216,11 @@ const Outbound: React.FC = () => {
               setStatusFilter(val);
               setCurrentPage(1);
             }}
+            tipoDestinatarioFilter={tipoDestinatarioFilter}
+            setTipoDestinatarioFilter={(val) => {
+              setTipoDestinatarioFilter(val);
+              setCurrentPage(1);
+            }}
             fechaDesde={fechaDesde}
             setFechaDesde={setFechaDesde}
             fechaHasta={fechaHasta}
@@ -238,7 +247,7 @@ const Outbound: React.FC = () => {
           {/* MODAL DE DETALLE Y PICKEO */}
           {selectedDelivery && (
             <PickingDetailModal
-              deliveryId={selectedDelivery.IdEntrega}
+              deliveryId={selectedDelivery.IdEntrega || selectedDelivery.Numero_Entrega_SAP}
               onClose={() => setSelectedDelivery(null)}
               onDispatched={() => fetchData()}
             />

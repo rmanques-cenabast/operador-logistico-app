@@ -38,6 +38,7 @@ export interface ArrivalOrder {
   numeroLotes?: number;
   historialEntregas?: any[];
   numeroFactura?: string;
+  estadoFacturaSAP?: 'PROCESADO_SAP' | 'PENDIENTE_SAP' | 'FALTA_FACTURA' | string;
 }
 
 interface ArrivalDetailModalProps {

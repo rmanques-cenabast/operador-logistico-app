@@ -44,7 +44,7 @@ export interface AdjustmentHeader {
   logsSap?: SapLog[];
 }
 
-export const useInventoryData = (modulo?: string, limit: number = 25) => {
+export const useInventoryData = (modulo?: string, limit: number = 25, linea?: string) => {
   const [adjustments, setAdjustments] = useState<AdjustmentHeader[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +56,9 @@ export const useInventoryData = (modulo?: string, limit: number = 25) => {
       url.searchParams.set('limit', String(limit));
       if (modulo) {
         url.searchParams.set('modulo', modulo);
+      }
+      if (linea && linea !== 'TODOS') {
+        url.searchParams.set('linea', linea);
       }
 
       const res = await fetch(url.toString(), {
@@ -86,7 +89,7 @@ export const useInventoryData = (modulo?: string, limit: number = 25) => {
       }
     }, 20000);
     return () => clearInterval(intervalId);
-  }, [modulo, limit]);
+  }, [modulo, limit, linea]);
 
   return { adjustments, loading, fetchAdjustments };
 };

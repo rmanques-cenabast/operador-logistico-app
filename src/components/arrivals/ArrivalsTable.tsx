@@ -34,6 +34,7 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
               <th className="py-3.5 px-5">RUT Prov.</th>
               <th className="py-3.5 px-5">P. Compra</th>
               <th className="py-3.5 px-5 text-center">N° Factura</th>
+              <th className="py-3.5 px-5 text-center">Anexo SAP</th>
               <th className="py-3.5 px-5">Material</th>
               <th className="py-3.5 px-5">Lote Recibido</th>
               <th className="py-3.5 px-5 text-right">Cant. Recibida</th>
@@ -44,12 +45,12 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
             </tr>
           </thead>
           {isLoading ? (
-            <TableSkeleton rows={5} columns={11} />
+            <TableSkeleton rows={5} columns={12} />
           ) : (
             <tbody className="divide-y divide-slate-200">
               {currentOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={12} className="py-12 text-center text-slate-400 text-sm">
                     No se encontraron recepciones confirmadas.
                   </td>
                 </tr>
@@ -74,6 +75,17 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
                         </span>
                       ) : (
                         <span className="text-slate-400 font-medium">-</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-5 text-center font-mono">
+                      {order.estadoFacturaSAP === 'PROCESADO_SAP' ? (
+                        <span className="inline-block px-2.5 py-1 rounded text-xs font-bold tracking-wide uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          SÍ
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2.5 py-1 rounded text-xs font-bold tracking-wide uppercase bg-slate-100 text-slate-500 border border-slate-200">
+                          NO
+                        </span>
                       )}
                     </td>
                     <td className="py-4 px-5 font-mono text-slate-800 font-bold">

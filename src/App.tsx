@@ -10,6 +10,7 @@ import Login from './pages/Login';
 // Lazy Loading / Code Splitting (Se descargan solo cuando el usuario navega a esa pantalla)
 const InventoryGeneral = lazy(() => import('./pages/inventory/InventoryGeneral'));
 const InventoryTransfers = lazy(() => import('./pages/inventory/InventoryTransfers'));
+const InventoryStockWarehouse = lazy(() => import('./pages/inventory/InventoryStockWarehouse'));
 const InventoryWaste = lazy(() => import('./pages/inventory/InventoryWaste'));
 const InventoryCounts = lazy(() => import('./pages/inventory/InventoryCounts'));
 const InventorySamples = lazy(() => import('./pages/inventory/InventorySamples'));
@@ -46,6 +47,7 @@ const App: React.FC = () => {
                 <Route path="entrada/pre-aviso/upload" element={<UploadPreaviso />} />
                 <Route path="inventario" element={<InventoryGeneral />} />
                 <Route path="inventario/traspasos" element={<InventoryTransfers />} />
+                <Route path="inventario/stock-almacen" element={<InventoryStockWarehouse />} />
                 <Route path="inventario/mermas" element={<InventoryWaste />} />
                 <Route path="inventario/conteos" element={<InventoryCounts />} />
                 <Route path="inventario/muestras" element={<InventorySamples />} />

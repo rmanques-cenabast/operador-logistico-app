@@ -8,6 +8,8 @@ interface ArrivalsFiltersProps {
   onProviderChange: (value: string) => void;
   filterStatus: string;
   onStatusChange: (value: string) => void;
+  filterFacturaStatus: string;
+  onFacturaStatusChange: (value: string) => void;
   providers: string[];
 }
 
@@ -18,6 +20,8 @@ export const ArrivalsFilters: React.FC<ArrivalsFiltersProps> = ({
   onProviderChange,
   filterStatus,
   onStatusChange,
+  filterFacturaStatus,
+  onFacturaStatusChange,
   providers
 }) => {
   return (
@@ -49,7 +53,7 @@ export const ArrivalsFilters: React.FC<ArrivalsFiltersProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-bold text-xs uppercase tracking-wider">Estado:</span>
+          <span className="text-slate-500 font-bold text-xs uppercase tracking-wider">Estado Físico:</span>
           <select 
             value={filterStatus} 
             onChange={(e) => onStatusChange(e.target.value)}
@@ -59,6 +63,21 @@ export const ArrivalsFilters: React.FC<ArrivalsFiltersProps> = ({
             <option value="COMPLETA">COMPLETA</option>
             <option value="PARCIAL">PARCIAL</option>
             <option value="CON DIFERENCIAS">CON DIFERENCIAS</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500 font-bold text-xs uppercase tracking-wider">Anexo SAP:</span>
+          <select 
+            value={filterFacturaStatus} 
+            onChange={(e) => onFacturaStatusChange(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="TODOS">TODOS</option>
+            <option value="TODOS_PENDIENTES">TODOS LOS PENDIENTES</option>
+            <option value="PENDIENTE_SAP">PENDIENTE ADJUNTAR A SAP</option>
+            <option value="FALTA_FACTURA">FALTA SUBIR FACTURA</option>
+            <option value="PROCESADO_SAP">SUBIDO A SAP (PROCESADO)</option>
           </select>
         </div>
       </div>

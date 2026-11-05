@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ArrowRight, Eye } from 'lucide-react';
 import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { MovementDetailModal } from './MovementDetailModal';
 import { TableSkeleton } from '../common/TableSkeleton';
+import { getWarehouseInfo, getWarehouseLinea } from '../../constants/warehouses';
 
 export const getMovimientoTypeBadge = (mov: string, origen?: string, destino?: string) => {
   if (mov === '311' || (origen && destino && origen !== destino)) {
@@ -87,6 +88,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
             <thead>
               <tr className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
                 <th className="py-3.5 px-4 text-left whitespace-nowrap">FECHA</th>
+                <th className="py-3.5 px-3 text-center whitespace-nowrap">LÍNEA</th>
                 <th className="py-3.5 px-3 text-center whitespace-nowrap">OPERACIÓN SAP</th>
                 <th className="py-3.5 px-3 text-center whitespace-nowrap">ESTADO SAP</th>
                 <th className="py-3.5 px-3 text-center whitespace-nowrap">REF. SAP</th>
@@ -101,12 +103,12 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               </tr>
             </thead>
             {loading ? (
-              <TableSkeleton rows={8} columns={12} />
+              <TableSkeleton rows={8} columns={13} />
             ) : (
               <tbody className="divide-y divide-slate-200">
                 {flattenedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="py-12 text-center text-slate-400 text-sm font-semibold uppercase">
+                    <td colSpan={13} className="py-12 text-center text-slate-400 text-sm font-semibold uppercase">
                       NO SE ENCONTRARON REGISTROS EN ESTA VISTA CON LOS FILTROS SELECCIONADOS.
                     </td>
                   </tr>
@@ -138,6 +140,13 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     const esEgreso = ['711', '717', '551', '553', '555', '331', '333'].includes(det.Tipo_Movimiento);
                     const cantidadReal = esEgreso ? -Math.abs(det.Cantidad) : det.Cantidad;
 
+                    const lineaOrigen = getWarehouseLinea(det.Almacen_Origen);
+                    const lineaDestino = getWarehouseLinea(det.Almacen_Destino);
+                    const lineaNegocioRow = lineaOrigen || lineaDestino || (header.Linea_Negocio === 'FP' || header.Linea_Negocio === 'INT' ? header.Linea_Negocio : null);
+
+                    const infoOrigen = getWarehouseInfo(det.Almacen_Origen);
+                    const infoDestino = getWarehouseInfo(det.Almacen_Destino);
+
                     return (
                       <tr
                         key={rowKey}
@@ -149,6 +158,29 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                             <span className="font-semibold text-slate-800">{fechaFmt}</span>
                             <span className="text-slate-400">{horaFmt}</span>
                           </div>
+                        </td>
+
+                        {/* LÍNEA DE NEGOCIO */}
+                        <td className="py-4 px-3 text-center whitespace-nowrap">
+                          {lineaNegocioRow === 'INT' ? (
+                            <span 
+                              className="inline-flex items-center justify-center px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider font-mono" 
+                              style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}
+                              title="Intermediación (Línea 22 - Almacenes 6001 a 6015)"
+                            >
+                              INT
+                            </span>
+                          ) : lineaNegocioRow === 'FP' ? (
+                            <span 
+                              className="inline-flex items-center justify-center px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider font-mono" 
+                              style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                              title="Farmacias Privadas (Línea 54 - Almacenes 6101 a 6115)"
+                            >
+                              FP
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-mono">-</span>
+                          )}
                         </td>
 
                         {/* OPERACIÓN SAP */}
@@ -195,7 +227,15 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         {/* ALMACÉN ORIGEN */}
                         <td className="py-4 px-2 text-center whitespace-nowrap" style={{ position: 'relative' }}>
                           {det.Almacen_Origen ? (
-                            <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">
+                            <span 
+                              className="font-mono text-xs font-semibold px-2 py-0.5 rounded border inline-block"
+                              style={{
+                                background: infoOrigen?.linea === 'INT' ? '#f0fdf4' : infoOrigen?.linea === 'FP' ? '#f0f9ff' : '#f8fafc',
+                                color: infoOrigen?.linea === 'INT' ? '#166534' : infoOrigen?.linea === 'FP' ? '#0369a1' : '#334155',
+                                borderColor: infoOrigen?.linea === 'INT' ? '#bbf7d0' : infoOrigen?.linea === 'FP' ? '#bae6fd' : '#e2e8f0'
+                              }}
+                              title={infoOrigen?.description || `Almacén ${det.Almacen_Origen}`}
+                            >
                               {det.Almacen_Origen}
                             </span>
                           ) : (
@@ -220,7 +260,15 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         {/* ALMACÉN DESTINO */}
                         <td className="py-4 px-2 text-center whitespace-nowrap">
                           {det.Almacen_Destino ? (
-                            <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">
+                            <span 
+                              className="font-mono text-xs font-semibold px-2 py-0.5 rounded border inline-block"
+                              style={{
+                                background: infoDestino?.linea === 'INT' ? '#f0fdf4' : infoDestino?.linea === 'FP' ? '#f0f9ff' : '#f8fafc',
+                                color: infoDestino?.linea === 'INT' ? '#166534' : infoDestino?.linea === 'FP' ? '#0369a1' : '#334155',
+                                borderColor: infoDestino?.linea === 'INT' ? '#bbf7d0' : infoDestino?.linea === 'FP' ? '#bae6fd' : '#e2e8f0'
+                              }}
+                              title={infoDestino?.description || `Almacén ${det.Almacen_Destino}`}
+                            >
                               {det.Almacen_Destino}
                             </span>
                           ) : (
@@ -235,7 +283,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                           ) : (
                             <span className="text-slate-400 text-xs">-</span>
                           )}
-                          {((det as any).StockOrigen || (det as any).stockorigen) && ((det as any).StockDestino || (det as any).stockdestino) && (
+                          {((det as any).StockOrigen || (det as any).stockorigen) && ((det as any).StockDestino || (det as any).stockdestino || det.Tipo_Movimiento === '311') && (
                             <ArrowRight
                               className="transfer-arrow"
                               size={14}
@@ -253,18 +301,16 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
 
                         {/* STOCK DESTINO */}
                         <td className="py-4 px-3 text-center whitespace-nowrap">
-                          {((det as any).StockDestino || (det as any).stockdestino) ? (
-                            renderStockBadge((det as any).StockDestino || (det as any).stockdestino)
+                          {((det as any).StockDestino || (det as any).stockdestino || (det.Tipo_Movimiento === '311' ? 'LIBRE' : null)) ? (
+                            renderStockBadge((det as any).StockDestino || (det as any).stockdestino || (det.Tipo_Movimiento === '311' ? 'LIBRE' : null))
                           ) : (
                             <span className="text-slate-400 text-xs">-</span>
                           )}
                         </td>
 
                         {/* CANTIDAD */}
-                        <td className="py-4 px-3 text-center font-mono text-sm font-bold whitespace-nowrap">
-                          <span className={cantidadReal > 0 ? 'text-emerald-600' : (cantidadReal < 0 ? 'text-rose-600' : 'text-slate-700')}>
-                            {cantidadReal > 0 ? `+${cantidadReal}` : cantidadReal} UN.
-                          </span>
+                        <td className="py-4 px-3 text-center font-mono text-sm font-semibold text-slate-800 whitespace-nowrap">
+                          {cantidadReal < 0 ? `-${Math.abs(cantidadReal)}` : cantidadReal} UN.
                         </td>
 
                         {/* ACCIÓN (ÚNICO DISPARADOR DEL MODAL) */}

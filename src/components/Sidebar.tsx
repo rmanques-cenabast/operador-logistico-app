@@ -219,8 +219,11 @@ const Sidebar: React.FC = () => {
             </div>
             {isInventarioOpen && (
               <div className="submenu">
+                <NavLink to="/inventario/stock-almacen" onClick={closeDrawer} className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
+                   <span>Stock x Almacén (MB52)</span>
+                </NavLink>
                 <NavLink to="/inventario" end onClick={closeDrawer} className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
-                   <span>Ajuste de inventarios</span>
+                   <span>Registro Ajuste Inv.</span>
                 </NavLink>
                 <NavLink to="/inventario/traspasos" onClick={closeDrawer} className={({ isActive }) => `submenu-item ${isActive ? 'active' : ''}`}>
                    <span>Traslado Alm.</span>

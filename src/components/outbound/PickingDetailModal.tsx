@@ -4,7 +4,6 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle, 
-  Printer, 
   MapPin, 
   Layers,
   Calendar,
@@ -32,6 +31,7 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [dispatching, setDispatching] = useState<boolean>(false);
+  const [picking, setPicking] = useState<boolean>(false);
 
   useEffect(() => {
     loadDelivery();
@@ -59,13 +59,43 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
     }
   };
 
+  const handleConfirmPicking = async () => {
+    if (!delivery || !delivery.lineas || delivery.lineas.length === 0) return;
+    setPicking(true);
+    setError(null);
+    setSuccessBanner(null);
+    try {
+      const items = delivery.lineas.map((lin) => ({
+        idDetalle: lin.IdDetalle,
+        posicion: lin.Posicion,
+        codigoMaterial: lin.Codigo_Material,
+        cantidadPickeada: Number(lin.Cantidad_Solicitada),
+        loteSap: lin.Lote_SAP || 'L260401A',
+        fechaVencimiento: lin.Fecha_Vencimiento || '2028-12-31'
+      }));
+
+      const deliveryKey = delivery.IdEntrega || delivery.Numero_Entrega_SAP;
+      await OutboundService.confirmPicking(deliveryKey, items, 'OPERARIO_BODEGA');
+      setSuccessBanner('¡Pickeo confirmado con éxito! La entrega quedó lista en estado PICKING_CONFIRMADO.');
+      await loadDelivery();
+      if (onDispatched) {
+        onDispatched();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al confirmar pickeo');
+    } finally {
+      setPicking(false);
+    }
+  };
+
   const handleDispatchSap = async () => {
     if (!delivery) return;
     setDispatching(true);
     setError(null);
     setSuccessBanner(null);
     try {
-      const res = await OutboundService.dispatchToSap(delivery.IdEntrega);
+      const deliveryKey = delivery.IdEntrega || delivery.Numero_Entrega_SAP;
+      const res = await OutboundService.dispatchToSap(deliveryKey);
       setSuccessBanner(`¡Salida de mercancías contabilizada exitosamente en SAP! Documento PGI: ${res.documentoPgi}. Guía DTE: ${res.folioDte}`);
       await loadDelivery();
       if (onDispatched) {
@@ -73,6 +103,40 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
       }
     } catch (err: any) {
       setError(err.message || 'Error al comunicar con la API de SAP para contabilizar la salida.');
+    } finally {
+      setDispatching(false);
+    }
+  };
+
+  const handleFastTrackFlow = async () => {
+    if (!delivery || !delivery.lineas || delivery.lineas.length === 0) return;
+    setDispatching(true);
+    setError(null);
+    setSuccessBanner(null);
+    try {
+      const deliveryKey = delivery.IdEntrega || delivery.Numero_Entrega_SAP;
+      // 1. Confirmar pickeo si no está confirmado
+      if (!isConfirmed) {
+        const items = delivery.lineas.map((lin) => ({
+          idDetalle: lin.IdDetalle,
+          posicion: lin.Posicion,
+          codigoMaterial: lin.Codigo_Material,
+          cantidadPickeada: Number(lin.Cantidad_Solicitada),
+          loteSap: lin.Lote_SAP || 'L260401A',
+          fechaVencimiento: lin.Fecha_Vencimiento || '2028-12-31'
+        }));
+        await OutboundService.confirmPicking(deliveryKey, items, 'OPERARIO_BODEGA');
+      }
+
+      // 2. Contabilizar en SAP de inmediato
+      const res = await OutboundService.dispatchToSap(deliveryKey);
+      setSuccessBanner(`¡Flujo completo exitoso! Salida contabilizada en SAP con Doc. PGI: ${res.documentoPgi}. Guía DTE: ${res.folioDte}`);
+      await loadDelivery();
+      if (onDispatched) {
+        onDispatched();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al procesar salida con SAP.');
     } finally {
       setDispatching(false);
     }
@@ -93,6 +157,20 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
     return `${day}-${month}-${year}`;
   };
 
+  const formatUom = (uom?: string | null) => {
+    if (!uom) return 'UN';
+    const raw = uom.trim().toUpperCase();
+    if (raw === 'KI' || raw === 'CS' || raw === 'KAR' || raw === 'KST') return 'CAJ';
+    if (raw === 'ST' || raw === 'PCE' || raw === 'PC' || raw === 'EA') return 'UN';
+    if (raw === 'FL' || raw === 'FLA') return 'FCO';
+    if (raw === 'AMP') return 'AMP';
+    if (raw === 'TUB') return 'TUB';
+    if (raw === 'BL' || raw === 'BLI') return 'BLI';
+    if (raw === 'SOB' || raw === 'BAG') return 'SOB';
+    return raw;
+  };
+
+  const isPicking = delivery?.Estado === 'EN_PICKING';
   const isConfirmed = delivery?.Estado === 'PICKING_CONFIRMADO' || delivery?.Estado === 'DESPACHADO' || delivery?.Estado === 'DTE_EMITIDO';
   const isDespachado = delivery?.Estado === 'DESPACHADO';
 
@@ -106,7 +184,7 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER MODAL */}
@@ -120,18 +198,42 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
                 <h3 className="text-base font-bold text-slate-900 tracking-tight">
                   Entrega de Salida #{delivery?.Numero_Entrega_SAP || '...'}
                 </h3>
+                <span
+                  className={`inline-flex items-center justify-center px-2 py-0.5 rounded font-mono font-bold text-xs border ${
+                    isDespachado
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : isConfirmed || isPicking
+                      ? 'bg-sky-100 text-sky-800 border-sky-300'
+                      : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}
+                  title="Estatus Salida de Mercancías en SAP (WBSTK)"
+                >
+                  SM: {isDespachado ? 'C' : isConfirmed || isPicking ? 'B' : 'A'}
+                </span>
                 {isDespachado && (
                   <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
                     PGI 601 SAP CONCLUIDO
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 font-medium">
-                <span>Pedido Venta: <strong className="font-mono text-slate-700">{delivery?.Pedido_Venta_SAP || '-'}</strong></span>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1 font-medium">
+                <span>Doc. Modelo: <strong className="font-mono text-slate-700">{delivery?.Doc_Modelo || delivery?.Pedido_Venta_SAP || '-'}</strong></span>
+                {delivery?.Codigo_Destinatario && (
+                  <>
+                    <span className="text-slate-300">•</span>
+                    <span>Destinat. (KUNNR): <strong className="font-mono text-slate-700">{delivery.Codigo_Destinatario}</strong></span>
+                  </>
+                )}
+                {delivery?.Solicitante && (
+                  <>
+                    <span className="text-slate-300">•</span>
+                    <span>Solicitante: <strong className="font-mono text-slate-700">{delivery.Solicitante}</strong></span>
+                  </>
+                )}
                 {delivery?.Destinatario && (
                   <>
                     <span className="text-slate-300">•</span>
-                    <span className="text-slate-600 truncate max-w-[420px]">{delivery.Destinatario}</span>
+                    <span className="text-slate-700 font-semibold truncate max-w-[320px]">{delivery.Destinatario}</span>
                   </>
                 )}
               </div>
@@ -147,7 +249,7 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
         </div>
 
         {/* CONTENIDO SCROLLABLE */}
-        <div className="p-6 overflow-y-auto space-y-5">
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
               <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
@@ -163,11 +265,6 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
             <>
               {/* STEPPER LOGÍSTICO SAP */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
-                  <span>FLUJO OFICIAL DE INTERFAZ CENABAST ⟷ OPERADOR LOGÍSTICO</span>
-                  <span className="text-blue-600 font-semibold">ESTÁNDAR LOGÍSTICO SAP</span>
-                </div>
-                
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                   {/* PASO 1 */}
                   <div className="flex flex-col items-center text-center p-2.5 rounded-lg bg-white border border-emerald-200 shadow-xs">
@@ -197,59 +294,61 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
                       {isConfirmed ? <Check size={13} strokeWidth={3} /> : '3'}
                     </div>
                     <span className="text-[10px] font-bold text-slate-800 uppercase">3. PICKEO BODEGA</span>
-                    <span className="text-[9px] text-blue-600 font-semibold">ROL OL (FÍSICO)</span>
+                    <span className="text-[9px] text-slate-400 font-mono">PREPARACIÓN</span>
                   </div>
 
-                  {/* PASO 4 */}
+                  {/* PASO 4: SALIDA SAP (PGI 601) */}
                   <div className={`flex flex-col items-center text-center p-2.5 rounded-lg bg-white border shadow-xs ${
-                    delivery.Folio_DTE ? 'border-emerald-200' : 'border-slate-200 opacity-70'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1 ${
-                      delivery.Folio_DTE ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {delivery.Folio_DTE ? <Check size={13} strokeWidth={3} /> : '4'}
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-800 uppercase">4. EMISIÓN DTE 52</span>
-                    <span className="text-[9px] text-slate-400 font-mono">GUÍA SII CENABAST</span>
-                  </div>
-
-                  {/* PASO 5 */}
-                  <div className={`flex flex-col items-center text-center p-2.5 rounded-lg bg-white border shadow-xs col-span-2 sm:col-span-1 ${
                     isDespachado ? 'border-emerald-300 ring-2 ring-emerald-500/20' : 'border-slate-200 opacity-60'
                   }`}>
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1 ${
                       isDespachado ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
                     }`}>
-                      {isDespachado ? <Check size={13} strokeWidth={3} /> : '5'}
+                      {isDespachado ? <Check size={13} strokeWidth={3} /> : '4'}
                     </div>
-                    <span className="text-[10px] font-bold text-slate-800 uppercase">5. SALIDA SAP (601)</span>
-                    <span className="text-[9px] text-slate-500 font-mono">
-                      {delivery.Documento_SAP_PGI || 'PGI AUTOMÁTICO'}
+                    <span className="text-[10px] font-bold text-slate-800 uppercase">4. SALIDA SAP (601)</span>
+                    <span className="text-[9px] text-emerald-700 font-mono font-bold">
+                      {delivery.Documento_SAP_PGI || 'PGI MOV. 601'}
+                    </span>
+                  </div>
+
+                  {/* PASO 5: EMISIÓN DTE / FACTURA (SAP IDCP) */}
+                  <div className={`flex flex-col items-center text-center p-2.5 rounded-lg bg-white border shadow-xs col-span-2 sm:col-span-1 ${
+                    delivery.Folio_DTE ? 'border-emerald-200' : 'border-slate-200 opacity-70'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1 ${
+                      delivery.Folio_DTE ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {delivery.Folio_DTE ? <Check size={13} strokeWidth={3} /> : '5'}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-800 uppercase">5. EMISIÓN DTE</span>
+                    <span className="text-[9px] text-slate-400 font-mono">
+                      {delivery.Folio_DTE || 'SAP IDCP / SII'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* GRID DE DATOS CLAVE */}
+              {/* GRID DE DATOS CLAVE (TEXTOS CENTRADOS) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
                 {/* DESTINATARIO */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs text-center flex flex-col items-center justify-center">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                     <Building2 size={12} className="text-slate-400" />
                     <span>DESTINATARIO MERCANCÍA</span>
                   </div>
                   <div className="font-bold text-slate-800 uppercase text-xs line-clamp-1" title={delivery.Destinatario}>
                     {delivery.Destinatario}
                   </div>
-                  <div className="text-[11px] text-slate-500 uppercase mt-1 flex items-center gap-1">
+                  <div className="text-[11px] text-slate-500 uppercase mt-1 flex items-center justify-center gap-1">
                     <MapPin size={11} className="text-slate-400 shrink-0" />
                     <span className="truncate">{delivery.Direccion_Destino}, {delivery.Comuna}</span>
                   </div>
                 </div>
 
                 {/* FECHAS */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs text-center flex flex-col items-center justify-center">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                     <Calendar size={12} className="text-slate-400" />
                     <span>COMPROMISO DESPACHO</span>
                   </div>
@@ -262,8 +361,8 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
                 </div>
 
                 {/* ESTADO */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs text-center flex flex-col items-center justify-center">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                     <PackageCheck size={12} className="text-slate-400" />
                     <span>ESTADO EXPEDICIÓN</span>
                   </div>
@@ -282,18 +381,18 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
                     )}
                   </div>
                   <span className="text-[10px] text-slate-500 uppercase mt-1 block truncate">
-                    OPERADOR: {delivery.Usuario_OL || 'WMS_OPERADOR_LOGISTICO'}
+                    OPERADOR: {delivery.Usuario_OL || 'OPERADOR_BODEGA'}
                   </span>
                 </div>
 
                 {/* GUÍA DTE */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs text-center flex flex-col items-center justify-center">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                     <FileText size={12} className="text-slate-400" />
                     <span>GUÍA DESPACHO (DTE 52)</span>
                   </div>
                   <div className="font-bold text-xs font-mono text-emerald-700">
-                    {delivery.Folio_DTE || 'EN ESPERA DE PICKEO'}
+                    {delivery.Folio_DTE || (isDespachado ? 'EN ESPERA EMISIÓN CENABAST' : 'EN ESPERA DE PICKEO')}
                   </div>
                   <span className="text-[10px] text-slate-500 uppercase mt-1 block">
                     {delivery.Documento_SAP_PGI ? `PGI: ${delivery.Documento_SAP_PGI}` : 'DOCUMENTO SII ELECTRÓNICO'}
@@ -370,7 +469,7 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
 
                             {/* CANT. SOLICITADA */}
                             <td className="py-3 px-3 text-center font-mono font-bold text-slate-800 whitespace-nowrap">
-                              {linea.Cantidad_Solicitada} {linea.Unidad_Medida}
+                              {linea.Cantidad_Solicitada} {formatUom(linea.Unidad_Medida)}
                             </td>
 
                             {/* CANT. PICKEADA */}
@@ -382,7 +481,7 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
                                   ? 'text-sky-600'
                                   : 'text-slate-400'
                               }`}>
-                                {linea.Cantidad_Pickeada} {linea.Unidad_Medida}
+                                {linea.Cantidad_Pickeada} {formatUom(linea.Unidad_Medida)}
                               </span>
                             </td>
 
@@ -440,13 +539,6 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
                   <CheckCircle2 size={15} />
                   DESPACHADO Y CONTABILIZADO EN SAP ({delivery?.Documento_SAP_PGI || 'PGI CONCLUIDO'})
                 </span>
-                <button
-                  onClick={() => alert(`Imprimiendo Guía DTE 52 (${delivery?.Folio_DTE || 'N/A'}) para entrega SAP ${delivery?.Numero_Entrega_SAP}...`)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs transition-all uppercase tracking-wider cursor-pointer"
-                >
-                  <Printer size={14} />
-                  DTE 52
-                </button>
               </div>
             ) : isConfirmed ? (
               <div className="flex flex-wrap items-center gap-2">
@@ -454,28 +546,18 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
                   <PackageCheck size={14} />
                   PICKEO 100% ({delivery?.Usuario_OL || 'WMS_OL'})
                 </span>
-                <button
-                  onClick={handleDispatchSap}
-                  disabled={dispatching}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-bold rounded-xl shadow-xs transition-all uppercase tracking-wider cursor-pointer"
-                  title="Contabiliza la salida de mercancías (PGI Movimiento 601) en SAP de inmediato"
-                >
-                  <Send size={14} className={dispatching ? 'animate-spin' : ''} />
-                  {dispatching ? 'CONTABILIZANDO EN SAP...' : 'CONTABILIZAR EN SAP (PGI 601)'}
-                </button>
-                <button
-                  onClick={() => alert(`Imprimiendo Guía DTE 52 (${delivery?.Folio_DTE || 'N/A'}) para entrega SAP ${delivery?.Numero_Entrega_SAP}...`)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs transition-all uppercase tracking-wider cursor-pointer"
-                >
-                  <Printer size={14} />
-                  DTE 52
-                </button>
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200">
+                  <Clock size={14} className="animate-pulse" />
+                  EN COLA DE SINCRONIZACIÓN SAP (WORKER)
+                </span>
               </div>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-3.5 py-1.5 rounded-lg border border-amber-200">
-                <Clock size={14} />
-                ESPERANDO CONFIRMACIÓN DE PICKEO POR EL OPERADOR LOGÍSTICO
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                  <Clock size={14} />
+                  PENDIENTE DE PICKING (PROCESO POR API / WORKER)
+                </span>
+              </div>
             )}
           </div>
         </div>

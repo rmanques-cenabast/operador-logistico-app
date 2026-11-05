@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, RefreshCw } from 'lucide-react';
+import { WAREHOUSES_INTERMEDIACION, WAREHOUSES_FARMACIAS } from '../../constants/warehouses';
 
 interface InventoryFiltersProps {
   activeTab: string;
@@ -9,6 +10,9 @@ interface InventoryFiltersProps {
   setSelectedTipoMov: (val: string) => void;
   selectedTipoStock: string;
   setSelectedTipoStock: (val: string) => void;
+  lineaNegocio?: 'INT' | 'FP';
+  selectedAlmacen?: string;
+  setSelectedAlmacen?: (val: string) => void;
   inputFechaDesde: string;
   setInputFechaDesde: (val: string) => void;
   inputFechaHasta: string;
@@ -28,6 +32,9 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   setSelectedTipoMov,
   selectedTipoStock,
   setSelectedTipoStock,
+  lineaNegocio = 'INT',
+  selectedAlmacen,
+  setSelectedAlmacen,
   inputFechaDesde,
   setInputFechaDesde,
   inputFechaHasta,
@@ -38,9 +45,11 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   setMermasFechaHasta,
   fetchAdjustments
 }) => {
+  const warehousesList = lineaNegocio === 'INT' ? WAREHOUSES_INTERMEDIACION : WAREHOUSES_FARMACIAS;
+
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px', gap: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-      <div className="search-bar" style={{ width: '100%', maxWidth: '360px', position: 'relative' }}>
+      <div className="search-bar" style={{ width: '100%', maxWidth: '340px', position: 'relative' }}>
         <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
         <input
           type="text"
@@ -54,6 +63,38 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
       </div>
 
       <div className="filters" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+
+        {setSelectedAlmacen && (
+          <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+            ALMACÉN:
+            <select
+              value={selectedAlmacen || 'TODOS'}
+              onChange={(e) => setSelectedAlmacen(e.target.value)}
+              className="filter-select"
+              style={{
+                padding: '6px 10px',
+                border: selectedAlmacen && selectedAlmacen !== 'TODOS' ? '1px solid #10b981' : '1px solid var(--border-color)',
+                borderRadius: '4px',
+                background: selectedAlmacen && selectedAlmacen !== 'TODOS' ? '#ecfdf5' : 'var(--app-bg)',
+                color: selectedAlmacen && selectedAlmacen !== 'TODOS' ? '#047857' : 'inherit',
+                fontWeight: selectedAlmacen && selectedAlmacen !== 'TODOS' ? 700 : 500,
+                fontSize: '0.8rem',
+                outline: 'none',
+                cursor: 'pointer',
+                maxWidth: '280px'
+              }}
+            >
+              <option value="TODOS">
+                {lineaNegocio === 'INT' ? 'TODOS LOS ALMACENES (6001 - 6015)' : 'TODOS LOS ALMACENES (6101 - 6115)'}
+              </option>
+              {warehousesList.map(w => (
+                <option key={w.code} value={w.code}>
+                  {w.code} - {w.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {activeTab === 'generales' && (
           <div className="filter-item" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>

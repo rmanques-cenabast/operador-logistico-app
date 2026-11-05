@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { getMovimientoTypeBadge, renderStockBadge } from './InventoryTable';
+import { getWarehouseInfo, getWarehouseLinea } from '../../constants/warehouses';
 
 interface MovementDetailModalProps {
   header: AdjustmentHeader;
@@ -59,6 +60,10 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header
     }
   }
 
+  const lineaModal = getWarehouseLinea(detalle.Almacen_Origen) || getWarehouseLinea(detalle.Almacen_Destino) || (header.Linea_Negocio === 'FP' || header.Linea_Negocio === 'INT' ? header.Linea_Negocio : null);
+  const infoOrigen = getWarehouseInfo(detalle.Almacen_Origen);
+  const infoDestino = getWarehouseInfo(detalle.Almacen_Destino);
+
   return (
     <div className="modal-overlay" onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
       <div
@@ -72,6 +77,16 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header
             <span className="font-mono text-base font-bold text-slate-900">
               Detalle AJUSTE: {header.Nro_Ajuste}
             </span>
+            {lineaModal === 'INT' && (
+              <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded border border-emerald-200">
+                INTERMEDIACIÓN
+              </span>
+            )}
+            {lineaModal === 'FP' && (
+              <span className="text-xs font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded border border-blue-200">
+                FARMACIAS PRIVADAS
+              </span>
+            )}
             <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded border border-blue-200">
               ZCEN: {detalle.Codigo_Material}
             </span>
@@ -220,8 +235,15 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header
             {/* Cabecera del item */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
-                  LÍNEA {header.Linea_Negocio || 'CENABAST'}
+                <span 
+                  className="text-xs font-bold px-2.5 py-0.5 rounded border"
+                  style={{
+                    background: lineaModal === 'INT' ? '#ecfdf5' : lineaModal === 'FP' ? '#eff6ff' : '#f1f5f9',
+                    color: lineaModal === 'INT' ? '#047857' : lineaModal === 'FP' ? '#1d4ed8' : '#334155',
+                    borderColor: lineaModal === 'INT' ? '#a7f3d0' : lineaModal === 'FP' ? '#bfdbfe' : '#cbd5e1'
+                  }}
+                >
+                  {lineaModal === 'INT' ? 'INTERMEDIACIÓN (LÍNEA 22)' : lineaModal === 'FP' ? 'FARMACIAS PRIVADAS (LÍNEA 54)' : `LÍNEA ${header.Linea_Negocio || 'CENABAST'}`}
                 </span>
                 <span className="font-mono text-sm font-bold text-slate-900">
                   ZCEN: {detalle.Codigo_Material}
@@ -253,9 +275,13 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header
               <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
                 <span className="text-[11px] font-medium text-slate-500 block mb-1">ALMACÉN (ORIGEN → DEST.):</span>
                 <div className="flex items-center gap-1 font-mono text-xs md:text-sm text-slate-900 font-bold">
-                  <span>{detalle.Almacen_Origen || '-'}</span>
+                  <span title={infoOrigen?.description || `Almacén ${detalle.Almacen_Origen}`}>
+                    {detalle.Almacen_Origen || '-'}
+                  </span>
                   <ArrowRight size={12} className="text-blue-500" />
-                  <span>{detalle.Almacen_Destino || '-'}</span>
+                  <span title={infoDestino?.description || `Almacén ${detalle.Almacen_Destino}`}>
+                    {detalle.Almacen_Destino || '-'}
+                  </span>
                 </div>
               </div>
 
@@ -269,16 +295,14 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({ header
               <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
                 <span className="text-[11px] font-medium text-slate-500 block mb-1">STOCK DESTINO:</span>
                 <div className="flex justify-center items-center">
-                  {renderStockBadge((detalle as any).StockDestino || (detalle as any).stockdestino)}
+                  {renderStockBadge((detalle as any).StockDestino || (detalle as any).stockdestino || (detalle.Tipo_Movimiento === '311' ? 'LIBRE' : null))}
                 </div>
               </div>
 
               <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center col-span-2 sm:col-span-1">
                 <span className="text-[11px] font-medium text-slate-500 block mb-1">CANTIDAD AJUSTADA:</span>
-                <strong className={`font-mono text-xs md:text-sm font-bold ${
-                  cantidadReal > 0 ? 'text-emerald-600' : (cantidadReal < 0 ? 'text-rose-600' : 'text-slate-800')
-                }`}>
-                  {cantidadReal > 0 ? `+${cantidadReal}` : cantidadReal} UN.
+                <strong className="font-mono text-xs md:text-sm font-bold text-slate-800">
+                  {cantidadReal < 0 ? `-${Math.abs(cantidadReal)}` : cantidadReal} UN.
                 </strong>
               </div>
             </div>

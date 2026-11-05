@@ -9,6 +9,7 @@ export interface GetReceivedOrdersParams {
   search?: string;
   provider?: string;
   status?: string;
+  facturaStatus?: string;
 }
 
 export interface PaginatedReceivedOrders {
@@ -29,6 +30,7 @@ export const ArrivalsService = {
     let search = '';
     let provider = '';
     let status = '';
+    let facturaStatus = '';
 
     if (typeof params === 'string') {
       lineaNegocio = params;
@@ -39,6 +41,7 @@ export const ArrivalsService = {
       search = params.search || '';
       provider = params.provider || '';
       status = params.status || '';
+      facturaStatus = params.facturaStatus || '';
     }
 
     const query = new URLSearchParams();
@@ -48,6 +51,7 @@ export const ArrivalsService = {
     if (search.trim()) query.set('search', search.trim());
     if (provider && provider !== 'TODOS') query.set('provider', provider);
     if (status && status !== 'TODOS') query.set('status', status);
+    if (facturaStatus && facturaStatus !== 'TODOS') query.set('facturaStatus', facturaStatus);
 
     const cacheKey = `arrivals-${query.toString()}`;
     
@@ -137,6 +141,7 @@ export const ArrivalsService = {
         sapStatus: sapStatus,
         sapBadge: sapBadge,
         documentoSAP: item.documentoSAP,
+        estadoFacturaSAP: item.estadoFacturaSAP || 'FALTA_FACTURA',
         numeroEntregas: entregas.length,
         numeroLotes: lotesSet.size,
         almacenSAP: item.almacenSAP,

@@ -11,6 +11,7 @@ import { useDebounce } from '../hooks/useDebounce';
 const Arrivals: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('TODOS');
   const [filterProvider, setFilterProvider] = useState('TODOS');
+  const [filterFacturaStatus, setFilterFacturaStatus] = useState('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 350);
   
@@ -31,7 +32,7 @@ const Arrivals: React.FC = () => {
   // Resetear a página 1 cuando cambian filtros o búsqueda
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, filterProvider, filterStatus]);
+  }, [debouncedSearchTerm, filterProvider, filterStatus, filterFacturaStatus]);
 
   // Usar usePolling con paginación y búsqueda en servidor
   const { data: responseData, isLoading } = usePolling<PaginatedReceivedOrders>({
@@ -41,11 +42,12 @@ const Arrivals: React.FC = () => {
       limit: 25,
       search: debouncedSearchTerm,
       provider: filterProvider,
-      status: filterStatus
+      status: filterStatus,
+      facturaStatus: filterFacturaStatus
     }),
     initialData: null,
     intervalMs: 20000,
-    dependencies: [lineaNegocio, currentPage, debouncedSearchTerm, filterProvider, filterStatus]
+    dependencies: [lineaNegocio, currentPage, debouncedSearchTerm, filterProvider, filterStatus, filterFacturaStatus]
   });
 
   const orders: ArrivalOrder[] = responseData?.orders || [];
@@ -140,6 +142,8 @@ const Arrivals: React.FC = () => {
             onProviderChange={setFilterProvider}
             filterStatus={filterStatus}
             onStatusChange={setFilterStatus}
+            filterFacturaStatus={filterFacturaStatus}
+            onFacturaStatusChange={setFilterFacturaStatus}
             providers={uniqueProviders}
           />
 

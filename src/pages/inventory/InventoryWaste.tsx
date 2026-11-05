@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import Header from '../../components/Header';
+import { useAuth } from '../../contexts/AuthContext';
 import { useInventoryData, AdjustmentHeader, AdjustmentDetail } from '../../hooks/useInventoryData';
 import { InventoryFilters } from '../../components/inventory/InventoryFilters';
 import { InventoryTable } from '../../components/inventory/InventoryTable';
 
 const InventoryWaste: React.FC = () => {
-  const { adjustments, loading, fetchAdjustments } = useInventoryData('MERMAS', 25);
+  const { lineaNegocio } = useAuth();
+  const { adjustments, loading, fetchAdjustments } = useInventoryData('MERMAS', 50, lineaNegocio);
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedTipoMov, setSelectedTipoMov] = useState<string>('TODOS');
