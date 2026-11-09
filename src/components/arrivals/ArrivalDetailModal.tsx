@@ -64,7 +64,9 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
   const [showWarningModal, setShowWarningModal] = useState<boolean>(false);
   const [isLiberando, setIsLiberando] = useState<boolean>(false);
   const [attachingDocId, setAttachingDocId] = useState<number | null>(null);
+  const [attachingDocKey, setAttachingDocKey] = useState<string | null>(null);
   const [attachedDocs, setAttachedDocs] = useState<Set<number>>(new Set());
+  const [attachedDocSAPs, setAttachedDocSAPs] = useState<Set<string>>(new Set());
   const [releaseStatusModal, setReleaseStatusModal] = useState<ReleaseStatusModalData | null>(null);
 
   const targetOrder = orders.find(o => o.rowId === selectedRowId);
@@ -112,8 +114,9 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
     }
   };
 
-  const handleAdjuntarDocASap = async (doc: any) => {
-    if (!headerInfo?.documentoSAP) {
+  const handleAdjuntarDocASap = async (doc: any, customDocSAP?: string) => {
+    const docSAPTarget = customDocSAP || headerInfo?.documentoSAP;
+    if (!docSAPTarget) {
       setReleaseStatusModal({
         type: 'error',
         actionType: 'attachment',
@@ -123,18 +126,29 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
       return;
     }
 
+    const key = `${doc.id}-${docSAPTarget}`;
+    setAttachingDocKey(key);
     setAttachingDocId(doc.id);
     try {
-      const res: any = await ArrivalsService.adjuntarDocumentoASap(doc.id);
+      const res: any = await ArrivalsService.adjuntarDocumentoASap(doc.id, customDocSAP);
       if (res && res.status === 'success') {
         setAttachedDocs(prev => new Set(prev).add(doc.id));
+        if (customDocSAP) {
+          setAttachedDocSAPs(prev => new Set(prev).add(customDocSAP));
+        } else if (res.data?.documentosMaterialSAP) {
+          setAttachedDocSAPs(prev => {
+            const next = new Set(prev);
+            res.data.documentosMaterialSAP.forEach((d: string) => next.add(d));
+            return next;
+          });
+        }
         doc.estadoSAP = 'PROCESADO';
-        doc.documentoMaterialSAP = headerInfo.documentoSAP;
+        doc.documentoMaterialSAP = docSAPTarget;
         setReleaseStatusModal({
           type: 'success',
           actionType: 'attachment',
           title: '¡Anexo Vinculado con Éxito en SAP!',
-          message: res.message || `El archivo '${doc.nombreArchivo}' fue vinculado al Documento de Material ${headerInfo.documentoSAP} en SAP.`
+          message: res.message || `El archivo '${doc.nombreArchivo}' fue vinculado al Documento de Material ${docSAPTarget} en SAP.`
         });
       } else {
         setReleaseStatusModal({
@@ -152,6 +166,7 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
         message: err?.message || 'No fue posible conectarse con el servicio de anexos de SAP.'
       });
     } finally {
+      setAttachingDocKey(null);
       setAttachingDocId(null);
     }
   };
@@ -186,7 +201,7 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
       <div
         className="modal-container"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: '1080px', maxWidth: '95vw', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+        style={{ width: '1300px', maxWidth: '96vw', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
       >
         {/* Header */}
         <div className="panel-header" style={{ padding: '18px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', fontSize: '1.05rem', color: '#0f172a', background: '#f8fafc' }}>
@@ -229,17 +244,19 @@ export const ArrivalDetailModal: React.FC<ArrivalDetailModalProps> = ({
           {/* Resumen de productos declarados vs recibidos */}
           <ArrivalProductsSummary lines={selectedLines} />
 
-          {/* Historial de recepciones en bodega */}
-          <ArrivalReceptionHistory lines={selectedLines} />
+          {/* Historial de recepciones en bodega con Doc. Material SAP y acción directa */}
+          <ArrivalReceptionHistory 
+            lines={selectedLines} 
+            documentsMap={documentsMap}
+            attachingDocKey={attachingDocKey}
+            attachedDocSAPs={attachedDocSAPs}
+            onAdjuntarDocASap={handleAdjuntarDocASap}
+          />
 
-          {/* Documentos adjuntos, visor inline y botón adjuntar SAP */}
+          {/* Documentos adjuntos y visor inline */}
           <ArrivalDocumentsSection
             lines={selectedLines}
             documentsMap={documentsMap}
-            headerInfo={headerInfo}
-            attachedDocs={attachedDocs}
-            attachingDocId={attachingDocId}
-            onAdjuntarDocASap={handleAdjuntarDocASap}
           />
         </div>
 

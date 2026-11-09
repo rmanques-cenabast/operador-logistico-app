@@ -203,10 +203,14 @@ export const ArrivalsService = {
     return await res.json();
   },
 
-  adjuntarDocumentoASap: async (documentId: number) => {
+  adjuntarDocumentoASap: async (documentId: number, documentoMaterialSAP?: string) => {
     const res = await fetch(`${VISOR_API_URL}/inbound/documents/${documentId}/adjuntar-sap`, { 
       method: 'POST',
-      headers: getApiHeaders()
+      headers: {
+        ...getApiHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ documentoMaterialSAP })
     });
     return await res.json();
   }

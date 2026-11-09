@@ -47,32 +47,6 @@ export interface OutboundItem {
   Estado_Item: 'PENDIENTE' | 'PICKEADO';
 }
 
-export interface OutboundAlvItem {
-  IdEntrega: number;
-  IdDetalle: number;
-  Entrega: string;
-  DocModelo: string;
-  DestinatarioCodigo: string;
-  SM: 'A' | 'B' | 'C';
-  NombreDestinatario: string;
-  Material: string;
-  Denominacion: string;
-  UM: string;
-  CantidadEntrega: number;
-  CantidadPickeada: number;
-  Lote: string | null;
-  Pos: number;
-  Solicitante: string;
-  Canal: string;
-  OrgVenta: string;
-  TipoDestinatario: string;
-  Estado: string;
-  EstadoSap: string;
-  EstadoItem: string;
-  Fecha_Creacion: string;
-  Fecha_Compromiso: string;
-}
-
 export interface OutboundMetrics {
   PendientesPicking: number;
   EnPicking: number;
@@ -124,30 +98,6 @@ export const OutboundService = {
     return await res.json();
   },
 
-  getFlatItems: async (params: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    canal?: string;
-    tipoDestinatario?: string;
-    sm?: string;
-    search?: string;
-  } = {}) => {
-    const query = new URLSearchParams();
-    if (params.page) query.set('page', String(params.page));
-    if (params.limit) query.set('limit', String(params.limit));
-    if (params.status && params.status !== 'TODOS') query.set('status', params.status);
-    if (params.canal && params.canal !== 'TODOS') query.set('canal', params.canal);
-    if (params.tipoDestinatario && params.tipoDestinatario !== 'TODOS') query.set('tipoDestinatario', params.tipoDestinatario);
-    if (params.sm && params.sm !== 'TODOS') query.set('sm', params.sm);
-    if (params.search) query.set('search', params.search);
-
-    const res = await fetch(`${OUTBOUND_API_URL}/items?${query.toString()}`, {
-      headers: getApiHeaders()
-    });
-    return await res.json();
-  },
-
   getDeliveryById: async (id: number | string): Promise<OutboundDelivery & { lineas: OutboundItem[] }> => {
     const res = await fetch(`${OUTBOUND_API_URL}/deliveries/${id}`, {
       headers: getApiHeaders()
@@ -190,19 +140,6 @@ export const OutboundService = {
     const json = await res.json();
     if (json.status !== 'success') {
       throw new Error(json.message || 'Error al sincronizar con SAP');
-    }
-    return json;
-  },
-
-  dispatchToSap: async (id: number | string, usuario: string = 'SUPERVISOR_CENABAST') => {
-    const res = await fetch(`${OUTBOUND_API_URL}/deliveries/${id}/dispatch-sap`, {
-      method: 'POST',
-      headers: getApiHeaders(),
-      body: JSON.stringify({ usuario })
-    });
-    const json = await res.json();
-    if (json.status !== 'success') {
-      throw new Error(json.message || 'Error al despachar a SAP');
     }
     return json;
   }

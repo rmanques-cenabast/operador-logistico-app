@@ -30,7 +30,6 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
-  const [dispatching, setDispatching] = useState<boolean>(false);
   const [picking, setPicking] = useState<boolean>(false);
 
   useEffect(() => {
@@ -85,60 +84,6 @@ export const PickingDetailModal: React.FC<PickingDetailModalProps> = ({
       setError(err.message || 'Error al confirmar pickeo');
     } finally {
       setPicking(false);
-    }
-  };
-
-  const handleDispatchSap = async () => {
-    if (!delivery) return;
-    setDispatching(true);
-    setError(null);
-    setSuccessBanner(null);
-    try {
-      const deliveryKey = delivery.IdEntrega || delivery.Numero_Entrega_SAP;
-      const res = await OutboundService.dispatchToSap(deliveryKey);
-      setSuccessBanner(`¡Salida de mercancías contabilizada exitosamente en SAP! Documento PGI: ${res.documentoPgi}. Guía DTE: ${res.folioDte}`);
-      await loadDelivery();
-      if (onDispatched) {
-        onDispatched();
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error al comunicar con la API de SAP para contabilizar la salida.');
-    } finally {
-      setDispatching(false);
-    }
-  };
-
-  const handleFastTrackFlow = async () => {
-    if (!delivery || !delivery.lineas || delivery.lineas.length === 0) return;
-    setDispatching(true);
-    setError(null);
-    setSuccessBanner(null);
-    try {
-      const deliveryKey = delivery.IdEntrega || delivery.Numero_Entrega_SAP;
-      // 1. Confirmar pickeo si no está confirmado
-      if (!isConfirmed) {
-        const items = delivery.lineas.map((lin) => ({
-          idDetalle: lin.IdDetalle,
-          posicion: lin.Posicion,
-          codigoMaterial: lin.Codigo_Material,
-          cantidadPickeada: Number(lin.Cantidad_Solicitada),
-          loteSap: lin.Lote_SAP || 'L260401A',
-          fechaVencimiento: lin.Fecha_Vencimiento || '2028-12-31'
-        }));
-        await OutboundService.confirmPicking(deliveryKey, items, 'OPERARIO_BODEGA');
-      }
-
-      // 2. Contabilizar en SAP de inmediato
-      const res = await OutboundService.dispatchToSap(deliveryKey);
-      setSuccessBanner(`¡Flujo completo exitoso! Salida contabilizada en SAP con Doc. PGI: ${res.documentoPgi}. Guía DTE: ${res.folioDte}`);
-      await loadDelivery();
-      if (onDispatched) {
-        onDispatched();
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error al procesar salida con SAP.');
-    } finally {
-      setDispatching(false);
     }
   };
 

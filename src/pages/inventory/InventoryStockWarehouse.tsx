@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from '../../components/Header';
 import { VISOR_API_URL, getApiHeaders } from '../../config/api';
+import * as XLSX from 'xlsx';
 import { 
   Warehouse, 
   Search, 
@@ -96,8 +97,20 @@ const InventoryStockWarehouse: React.FC = () => {
     fetchStock(selectedAlmacen);
   }, [selectedAlmacen]);
 
+  // 1. Filtrado por término de búsqueda (Material SKU o Lote)
+  const searchedItems = useMemo(() => {
+    if (!searchTerm.trim()) return items;
+    const term = searchTerm.toLowerCase().trim();
+    return items.filter(
+      item =>
+        item.codigoMaterial.toLowerCase().includes(term) ||
+        item.lote.toLowerCase().includes(term)
+    );
+  }, [items, searchTerm]);
+
+  // 2. Filtrado final para la tabla aplicando también el tipo de stock seleccionado
   const filteredItems = useMemo(() => {
-    let result = items;
+    let result = searchedItems;
 
     // Filtro por tipo de stock
     if (selectedStockType === 'LIBRE') {
@@ -114,22 +127,12 @@ const InventoryStockWarehouse: React.FC = () => {
       result = result.filter(item => item.devoluciones > 0);
     }
 
-    // Filtro por término de búsqueda (Material SKU o Lote)
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase().trim();
-      result = result.filter(
-        item =>
-          item.codigoMaterial.toLowerCase().includes(term) ||
-          item.lote.toLowerCase().includes(term)
-      );
-    }
-
     return result;
-  }, [items, selectedStockType, searchTerm]);
+  }, [searchedItems, selectedStockType]);
 
-  // Métricas globales del almacén cargado (para las cards superiores)
+  // 3. Métricas dinámicas calculadas según la búsqueda activa (para las cards superiores)
   const metrics = useMemo(() => {
-    return items.reduce(
+    return searchedItems.reduce(
       (acc, item) => {
         acc.totalLotes += 1;
         acc.totalLibre += item.libre;
@@ -158,7 +161,7 @@ const InventoryStockWarehouse: React.FC = () => {
         totalGeneral: 0
       }
     );
-  }, [items]);
+  }, [searchedItems]);
 
   // Totales de la tabla (calculados sobre los registros filtrados en pantalla)
   const tableTotals = useMemo(() => {
@@ -177,54 +180,55 @@ const InventoryStockWarehouse: React.FC = () => {
     );
   }, [filteredItems]);
 
-  const exportToCSV = () => {
+  const exportToXLSX = () => {
     if (filteredItems.length === 0) return;
-    const headers = [
-      'Material',
-      'Ce.',
-      'Alm.',
-      'Lote',
-      'UMB',
-      'Libre utilizacion',
-      'Mon.',
-      'Valor libre util.',
-      'Trans./Trasl.',
-      'En control calidad',
-      'Valor en insp.cal.',
-      'Stock no libre',
-      'Bloqueado',
-      'Valor stock bloq.',
-      'Devoluciones',
-      'Total Fisico'
+
+    const dataToExport = filteredItems.map(i => ({
+      'Material': i.codigoMaterial,
+      'Ce.': i.centro || '6000',
+      'Alm.': i.almacen,
+      'Lote': i.lote,
+      'UMB': i.umb || 'UN',
+      'Libre utilización': i.libre,
+      'Mon.': i.moneda || 'CLP',
+      'Valor libre util.': i.valorLibre,
+      'Trans./Trasl.': i.traslado,
+      'En control calidad': i.calidad,
+      'Valor en insp.cal.': i.valorCalidad,
+      'Stock no libre': i.noLibre,
+      'Bloqueado': i.bloqueado,
+      'Valor stock bloq.': i.valorBloqueado || 0,
+      'Devoluciones': i.devoluciones,
+      'Total Físico': i.total
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    // Ajuste de ancho de columnas
+    worksheet['!cols'] = [
+      { wch: 14 }, // Material
+      { wch: 6 },  // Ce.
+      { wch: 6 },  // Alm.
+      { wch: 16 }, // Lote
+      { wch: 6 },  // UMB
+      { wch: 18 }, // Libre utilización
+      { wch: 6 },  // Mon.
+      { wch: 18 }, // Valor libre util.
+      { wch: 14 }, // Trans./Trasl.
+      { wch: 18 }, // En control calidad
+      { wch: 18 }, // Valor en insp.cal.
+      { wch: 14 }, // Stock no libre
+      { wch: 14 }, // Bloqueado
+      { wch: 18 }, // Valor stock bloq.
+      { wch: 14 }, // Devoluciones
+      { wch: 14 }  // Total Físico
     ];
-    const rows = filteredItems.map(i => [
-      i.codigoMaterial,
-      i.centro || '6000',
-      i.almacen,
-      i.lote,
-      i.umb || 'UN',
-      i.libre,
-      i.moneda || 'CLP',
-      i.valorLibre,
-      i.traslado,
-      i.calidad,
-      i.valorCalidad,
-      i.noLibre,
-      i.bloqueado,
-      i.valorBloqueado || 0,
-      i.devoluciones,
-      i.total
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,\uFEFF' +
-      [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Stock_MB52_Almacen_${selectedAlmacen}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Stock - ${selectedAlmacen}`);
+
+    const fileName = `Stock_Almacen_${selectedAlmacen}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   const nombreAlmacenActual = useMemo(() => {
@@ -241,10 +245,10 @@ const InventoryStockWarehouse: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Warehouse className="text-blue-600" size={28} />
-              <h2 className="page-title" style={{ margin: 0 }}>Stock por Almacén en Vivo (MB52)</h2>
+              <h2 className="page-title" style={{ margin: 0 }}>STOCK POR ALMACÉN MB52</h2>
             </div>
             <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted, #64748b)', fontSize: '14px' }}>
-              Consulta en tiempo real de saldos por lote desde SAP ERP (Centro 6000)
+              Visualización en tiempo real de materiales y saldos por lote
             </p>
           </div>
 
@@ -272,7 +276,7 @@ const InventoryStockWarehouse: React.FC = () => {
             </button>
 
             <button
-              onClick={exportToCSV}
+              onClick={exportToXLSX}
               disabled={filteredItems.length === 0}
               className="btn btn-primary"
               style={{
@@ -289,7 +293,7 @@ const InventoryStockWarehouse: React.FC = () => {
               }}
             >
               <Download size={16} />
-              Exportar CSV
+              Exportar XLSX
             </button>
           </div>
         </div>
@@ -316,7 +320,9 @@ const InventoryStockWarehouse: React.FC = () => {
             <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginTop: '8px' }}>
               {loading ? '...' : metrics.totalLotes.toLocaleString('es-CL')}
             </div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>Registros con saldo positivo</div>
+            <div style={{ fontSize: '12px', color: searchTerm.trim() ? '#2563eb' : '#94a3b8', marginTop: '4px', fontWeight: searchTerm.trim() ? 500 : 400 }}>
+              {searchTerm.trim() ? `Filtrado de ${items.length.toLocaleString('es-CL')} lotes totales` : 'Registros con saldo positivo'}
+            </div>
           </div>
 
           <div 
@@ -491,7 +497,7 @@ const InventoryStockWarehouse: React.FC = () => {
           )}
 
           <div style={{ fontSize: '12px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-            Última sync: {lastUpdated.toLocaleTimeString('es-CL')}
+            Ult. Búsqueda: {String(lastUpdated.getHours()).padStart(2, '0')}:{String(lastUpdated.getMinutes()).padStart(2, '0')}:{String(lastUpdated.getSeconds()).padStart(2, '0')}
           </div>
         </div>
 

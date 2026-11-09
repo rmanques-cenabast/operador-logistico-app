@@ -68,14 +68,14 @@ export const ArrivalProductsSummary: React.FC<ArrivalProductsSummaryProps> = ({ 
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
                   <span className="text-[11px] font-medium text-slate-500 block mb-1">Cant. Declarada:</span>
                   <strong className="font-mono text-xs md:text-sm text-slate-900 font-bold">
-                    {line.expectedQty.toLocaleString('es-CL')} {line.uom}
+                    {line.expectedQty.toLocaleString('es-CL')}
                   </strong>
                 </div>
 
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200/70 text-center flex flex-col justify-center items-center">
                   <span className="text-[11px] font-medium text-slate-500 block mb-1">Cant. Física Recibida:</span>
                   <strong className="font-mono text-xs md:text-sm text-slate-900 font-bold">
-                    {line.receivedQty.toLocaleString('es-CL')} {line.uom}
+                    {line.receivedQty.toLocaleString('es-CL')}
                   </strong>
                 </div>
 
@@ -84,7 +84,7 @@ export const ArrivalProductsSummary: React.FC<ArrivalProductsSummaryProps> = ({ 
                   <strong className={`font-mono text-xs md:text-sm font-bold ${
                     diff === 0 ? 'text-emerald-600' : (diff < 0 ? 'text-rose-600' : 'text-blue-600')
                   }`}>
-                    {diff > 0 ? `+${diff.toLocaleString('es-CL')}` : diff.toLocaleString('es-CL')} {line.uom}
+                    {diff > 0 ? `+${diff.toLocaleString('es-CL')}` : diff.toLocaleString('es-CL')}
                   </strong>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LogIn, BarChart2, Box, LogOut, ChevronDown, ChevronRight, Menu, Database, X } from 'lucide-react';
+import { PackagePlus, Truck, BarChart2, Box, ChevronDown, ChevronRight, Menu, Database, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 
@@ -71,7 +71,7 @@ const Sidebar: React.FC = () => {
             }}
             aria-label="Entrada"
           >
-            <LogIn size={18} />
+            <PackagePlus size={18} />
             <span className="rail-tooltip">Entrada</span>
           </button>
 
@@ -95,9 +95,12 @@ const Sidebar: React.FC = () => {
             className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
             aria-label="Salidas"
           >
-            <LogOut size={18} />
+            <Truck size={18} />
             <span className="rail-tooltip">Salidas</span>
           </NavLink>
+
+          {/* Separador de sección en Rail */}
+          <div style={{ width: '32px', height: '1px', background: 'var(--border-color, #e2e8f0)', margin: '6px 0' }} />
 
           {/* Datos Maestros */}
           <button
@@ -160,6 +163,18 @@ const Sidebar: React.FC = () => {
         </div>
 
         <nav className="nav-links" style={{ padding: '20px 12px', flex: 1, overflowY: 'auto' }}>
+          {/* TÍTULO SECCIÓN OPERACIONES */}
+          <div style={{ 
+            fontSize: '11px', 
+            fontWeight: 700, 
+            color: '#94a3b8', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.06em', 
+            padding: '0 12px 8px 12px' 
+          }}>
+            Operaciones
+          </div>
+
           {/* ENTRADA */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
@@ -173,7 +188,7 @@ const Sidebar: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <LogIn size={18} />
+                <PackagePlus size={18} />
                 <span>Entrada</span>
               </div>
               {isEntradaOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -251,9 +266,28 @@ const Sidebar: React.FC = () => {
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             style={{ justifyContent: 'flex-start', padding: '10px 12px' }}
           >
-            <LogOut size={18} />
+            <Truck size={18} />
             <span>Salidas</span>
           </NavLink>
+
+          {/* SEPARADOR DE SECCIÓN */}
+          <div style={{ 
+            height: '1px', 
+            background: 'var(--border-color, #e2e8f0)', 
+            margin: '20px 12px 14px 12px' 
+          }} />
+
+          {/* TÍTULO SECCIÓN GESTIÓN Y REPORTES */}
+          <div style={{ 
+            fontSize: '11px', 
+            fontWeight: 700, 
+            color: '#94a3b8', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.06em', 
+            padding: '0 12px 6px 12px' 
+          }}>
+            Gestión y Reportes
+          </div>
 
           {/* DATOS MAESTROS */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>

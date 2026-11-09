@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, RefreshCw, X, CloudDownload, Calendar } from 'lucide-react';
+import { CustomDatePicker } from '../common/CustomDatePicker';
 
 interface OutboundFiltersProps {
   searchTerm: string;
@@ -107,25 +108,34 @@ export const OutboundFilters: React.FC<OutboundFiltersProps> = ({
           </select>
         </div>
 
-        {/* RANGO DE FECHAS SAP (JULIO / HISTÓRICO) */}
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-500">
-          <Calendar size={13} className="text-slate-400" />
-          <span className="uppercase text-[10px]">DESDE:</span>
-          <input
-            type="date"
-            value={fechaDesde}
-            onChange={(e) => setFechaDesde(e.target.value)}
-            className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-700 outline-none focus:border-blue-500"
-            title="Fecha inicio para sincronizar de SAP"
-          />
-          <span className="uppercase text-[10px] ml-1">HASTA:</span>
-          <input
-            type="date"
-            value={fechaHasta}
-            onChange={(e) => setFechaHasta(e.target.value)}
-            className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-700 outline-none focus:border-blue-500"
-            title="Fecha corte (Julio 2026 para SAP DEV)"
-          />
+        {/* FECHA DESDE */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+            DESDE:
+          </span>
+          <div className="w-36">
+            <CustomDatePicker
+              placeholder="dd/mm/aaaa"
+              value={fechaDesde}
+              onChange={setFechaDesde}
+              maxDate={fechaHasta}
+            />
+          </div>
+        </div>
+
+        {/* FECHA HASTA */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+            HASTA:
+          </span>
+          <div className="w-36">
+            <CustomDatePicker
+              placeholder="dd/mm/aaaa"
+              value={fechaHasta}
+              onChange={setFechaHasta}
+              minDate={fechaDesde}
+            />
+          </div>
         </div>
 
         {/* BOTÓN LIMPIAR */}

@@ -95,7 +95,7 @@ export const ArrivalsTable: React.FC<ArrivalsTableProps> = ({
                       {order.batch}
                     </td>
                     <td className="py-4 px-5 text-right font-mono font-bold text-slate-800">
-                      {order.receivedQty.toLocaleString('es-CL')} {order.uom}
+                      {order.receivedQty.toLocaleString('es-CL')}
                     </td>
                     <td className="py-4 px-5 text-center font-mono">
                       {order.documentoSAP ? (

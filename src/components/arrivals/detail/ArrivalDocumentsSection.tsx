@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, CheckCircle, Paperclip, Loader2, Eye, X, Download, FileX, RefreshCw } from 'lucide-react';
+import { FileText, Loader2, Eye, X, Download, FileX, RefreshCw } from 'lucide-react';
 import { VISOR_API_URL } from '../../../config/api';
 import { ArrivalOrder } from '../ArrivalDetailModal';
 
 interface ArrivalDocumentsSectionProps {
   lines: ArrivalOrder[];
   documentsMap: Record<string, any[]>;
-  headerInfo?: ArrivalOrder;
-  attachedDocs: Set<number>;
-  attachingDocId: number | null;
-  onAdjuntarDocASap: (doc: any) => Promise<void>;
 }
 
 // Subcomponente con manejo de carga, blob URL y estado visual elegante ante error
@@ -149,11 +145,7 @@ const InlineDocumentViewer: React.FC<{ doc: any }> = ({ doc }) => {
 
 export const ArrivalDocumentsSection: React.FC<ArrivalDocumentsSectionProps> = ({
   lines,
-  documentsMap,
-  headerInfo,
-  attachedDocs,
-  attachingDocId,
-  onAdjuntarDocASap
+  documentsMap
 }) => {
   const [viewingDocId, setViewingDocId] = useState<number | null>(null);
 
@@ -220,8 +212,6 @@ export const ArrivalDocumentsSection: React.FC<ArrivalDocumentsSectionProps> = (
             );
           }
           return docs.map((doc: any) => {
-            const isDocAttached = attachedDocs.has(doc.id) || doc.estadoSAP === 'PROCESADO' || doc.estadoSap === 'PROCESADO';
-
             return (
               <div key={doc.id} style={{ display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 16px', background: 'white' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -245,53 +235,6 @@ export const ArrivalDocumentsSection: React.FC<ArrivalDocumentsSectionProps> = (
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Botón Adjuntar a SAP */}
-                    {isDocAttached ? (
-                      <span 
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}
-                        title={`Archivo vinculado en SAP GOS exitosamente${doc.documentoMaterialSAP ? ` (MIGO: ${doc.documentoMaterialSAP})` : ''}`}
-                      >
-                        <CheckCircle size={15} /> Adjunto en SAP
-                      </span>
-                    ) : headerInfo?.documentoSAP ? (
-                      <button
-                        onClick={() => onAdjuntarDocASap(doc)}
-                        disabled={attachingDocId === doc.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: attachingDocId === doc.id ? '#f1f5f9' : '#047857',
-                          border: '1px solid #047857',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          cursor: attachingDocId === doc.id ? 'not-allowed' : 'pointer',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          color: attachingDocId === doc.id ? '#64748b' : 'white',
-                          transition: 'all 0.2s'
-                        }}
-                        title={`Vincular a MIGO ${headerInfo.documentoSAP} en SAP`}
-                      >
-                        {attachingDocId === doc.id ? (
-                          <>
-                            <Loader2 size={15} className="animate-spin" /> Adjuntando...
-                          </>
-                        ) : (
-                          <>
-                            <Paperclip size={15} /> Adjuntar a SAP
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <span 
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 500, background: '#f8fafc', color: '#94a3b8', border: '1px dashed #cbd5e1', cursor: 'not-allowed' }}
-                        title="Primero debe generarse la MIGO en SAP para poder vincular la factura"
-                      >
-                        <Paperclip size={13} /> Pendiente MIGO
-                      </span>
-                    )}
-
                     <button 
                       onClick={() => viewingDocId === doc.id ? setViewingDocId(null) : setViewingDocId(doc.id)} 
                       style={{ display: 'flex', alignItems: 'center', gap: '6px', background: viewingDocId === doc.id ? '#f1f5f9' : 'white', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: '#2563eb', transition: 'all 0.2s' }}

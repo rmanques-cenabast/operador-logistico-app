@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Truck, Clock, CheckCircle2, PackageCheck, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { Eye, Truck, Clock, CheckCircle2, PackageCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { OutboundDelivery } from '../../services/outbound.service';
 
 interface OutboundTableProps {
@@ -254,19 +254,6 @@ export const OutboundTable: React.FC<OutboundTableProps> = ({
                     {/* ACCIÓN */}
                     <td className="py-3 px-2.5 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
-                        {delivery.Estado === 'PICKING_CONFIRMADO' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectDelivery(delivery);
-                            }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-xs transition-all uppercase cursor-pointer active:scale-95 animate-pulse"
-                            title="Pickeo confirmado por el OL. Clic para procesar salida en SAP"
-                          >
-                            <Send size={12} />
-                            PROCESAR SAP
-                          </button>
-                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

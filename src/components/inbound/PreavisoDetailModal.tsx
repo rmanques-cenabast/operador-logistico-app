@@ -148,13 +148,13 @@ export const PreavisoDetailModal: React.FC<PreavisoDetailModalProps> = ({
                     <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', fontFamily: 'monospace' }}>{line.batch}</td>
                     <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)' }}>{line.expDate}</td>
                     <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', textAlign: 'right', fontWeight: 400 }}>
-                      {line.qtyExpected} {line.uom}
+                      {line.qtyExpected}
                     </td>
                     <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', textAlign: 'right', fontWeight: 400, color: line.qtyReceived > 0 ? 'var(--success-main)' : 'inherit' }}>
-                      {line.qtyReceived} {line.uom}
+                      {line.qtyReceived}
                     </td>
                     <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', textAlign: 'right', fontWeight: 400, color: (line.qty > 0) ? 'var(--warning-main)' : 'var(--text-muted)' }}>
-                      {line.qty ?? 0} {line.uom}
+                      {line.qty ?? 0}
                     </td>
                     <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', textAlign: 'center' }}>
                       {(line.qty <= 0 || (line.qtyReceived >= line.qtyExpected && line.qtyExpected > 0)) ? (
